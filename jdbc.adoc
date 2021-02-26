@@ -1,0 +1,473 @@
+:doctype: article
+:encoding: utf-8
+:lang: en
+:toc: left
+:toclevels: 3
+:source-highlighter: highlightjs
+:icons: fontt
+:imagesdir: images
+:sectnums:
+
+JDBC stands for Java Database Connectivity.
+
+== Introduction
+
+- There are two main ways to access a relational database from Java:
+
+* Java Database Connectivity Language (JDBC): access data as rows and columns.
+* Java Persistence API (JPA): access data through Java objects using a concept called 
+object relational mapping (ORM)
+
+- Java comes with embedded database called JavaDB.
+
+== Writing basic SQL statements
+
+[source,sql]
+----
+INSERT INTO species VALUES (3, 'test', 1);
+SELECT * FROM species WHERE ID = 3;
+SELECT NAME, NUM_ACRES FROM species WHERE ID = 3;
+SELECT COUNT(*), SUM(num_acres) FROM species;
+UPDATE species SET NUM_ACRES = NUM_ACRES + .5 WHERE NAME = 'test';
+DELETE FROM species WHERE NAME = 'test';
+----
+
+== Introducing JDBC interface
+
+- Concrete classes come from JDBC driver. Each database has a different JAR file with these classes.
+
+image::key_jdbc_interfaces.jpg[]
+
+- Driver: knows how to get a connection to a database
+- Connection: knows how to communicate with a database
+- Statement: knows how to run the SQL
+- ResultSet: knows what was returned by a SELECT query
+
+
+- All interfaces are in package `java.sql`
+
+[source,java]
+----
+import java.sql.*;
+
+public class MyFirstDatabaseConnection {
+    public static void main(String[] args) {
+        String url = "jdbc:derby:zoo";
+        try (Connection conn = DriverManager.getConnection(url);
+            Statement stmt = conn.createStatement();
+            Result rs = stmt.executeQuery("select name from animal")) {
+            
+            while (rs.next()) {
+                System.out.println(rs.getString(1));
+            }
+        }
+    }
+}
+----
+
+== Connecting
+
+=== Building JDBC url
+
+- protocal:vendor:rest
+
+- example: 
+
+* jdbc:postgresql://localhost/zoo
+* jdbc:oracle:thin@123.123.123.123:1521:zoo
+* jdbc:mysql://localhost:3306/zoo?profileSQL=true
+
+=== Getting a Database Connection
+
+- There are two main ways to get a Connection: `DriverManager` or `DataSource`.
+
+- `DataSource` is a factory, is has more feature than `DriverManager`.
+
+[source,java]
+----
+import java.sql.*;
+
+public class TestConnection {
+    public static void main(String[] args) throws SQLException {
+        Connection conn = DriverManager.connection("jdbc:derby:zoo");
+        System.out.println(connection);
+    }
+}
+----
+
+- Run java with classpath
+----
+java -cp "<java_home>/db/lib/derby.jar:."
+----
+
+
+- connect with username and password
+
+[source,java]
+----
+import java.sql.*;
+
+public class TestExternal {
+    public static void main(String[] args) throws SQLException {
+        Connection conn = DriverManager.getConnection(
+            "jdbc:postgresql://localhost:5432/ocp-book",
+            "username",
+            "password"
+        );
+    }
+}
+----
+
+- The `DriverManager` looks through the classpath for JARS that contain a Driver.
+
+- The `DataSource` maintains a connection pool so that you can keep reusing a connection.
+
+- You can load a class using `Class.forName(...)`
+
+[source,java]
+----
+public static void main(String[] args) throws SQLException, ClassNotFoundException {
+    Class.forName("org.postgreqsql.Driver");
+
+    Connection conn = DriverManager.getConnection(
+        "jdbc:postgresql://localhost:5432/ocp-book",
+        "username",
+        "password"
+    );
+}
+----
+
+- Having `META-INF/service/java.sql.Driver` inside the JAR became mandatory with JDBC 4.0 in Java 6.
+
+image::jdbc_3.0_vs_4.0_drivers.jpg[]
+
+== Obtaining a Statement
+
+[source,java]
+----
+Statement stmt = conn.createStatement();
+Statement stm = connn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+----
+
+* You have to know all of the choices for these paramaters.
+
+=== Choosing a `ResultSet` Type
+
+- ResultSet.TYPE_FORWARD_ONLY: You can only read once (forward - default)
+- ResultSet.TYPE_SCORLL_INSENSITIVE: You can go back and forth, data will not be updated up the table changed.
+- ResultSet.TYPE_SCROLL_SENSITIVE: You can go back and forth, you will see the latest data. It's not supported by all Driver though.
+
+image::resultset_type_options.png[]
+
+=== Choosing a `ResultSet` Concurrency Mode
+
+- ResultSet.CONCUR_READ_ONLY: default, you can't update the `ResultSet`.
+- ResultSet.CONCUR_UPDATABLE: it lets you updat the database through the `ResultSet` (suprise mtf).
+
+==== Executing a `Statement`
+
+[source,java]
+----
+Statement stmt = conn.createStatement();
+int result = stmt.executeUpdate("insert into species values(10, 'Deer', 3");
+System.out.println(result); // 1
+result = stmt.executeUpdate("update species set name = '' where name = 'None'");
+System.out.println(result); // 0
+result = stmt.executeUpdate("delete from species where id = 10");
+System.out.println(result);
+----
+
+However, the result is different if you use `select` command
+
+[source,java]
+----
+ResultSet rs = stmt.executeQuery("select * from species");
+----
+
+- You can use `stmt.execute` to verify if the returned is a `ResultSet`
+
+[source,java]
+----
+boolean isResultSet = stmt.execute(query);
+if (isResultSet) {
+    ResultSet rs = stmt.getResultSet();
+    System.out.println("ran a query");
+} else {
+    int result = stmt.getUpdateCount();
+    System.out.println("ran an update");
+}
+----
+
+
+NOTE: `PreparedStatement` has three advantages: performance, security, readability.
+
+- If you call `executeUpdate` with select queries or `executeQuery` with update queries, a `SQLException` will be thrown.
+
+image::execute_methods.png[]
+image::return_types_of_execute.png[]
+
+== Getting data from a `ResultSet`
+
+=== Reading a `ResultSet`
+
+- When working with `ResultSet.TYPE_FORWARD_ONLY`, most of the time you wil write a loop like 
+
+[source,java]
+----
+Map<Integer, String> idToNameMap = new HashMap<>();
+ResultSet rs = stmt.executeQuery("select id, name from species");
+
+while (rs.next()) {
+    int id = rs.getInt("id");
+    String name = rs.getString("name");
+    idToNameMap.put(id, name);
+}
+
+System.out.println(idToNameMap);
+----
+
+- you can use index instead of column name
+
+[source,java]
+----
+Map<Integer, String> idToNameMap = new HashMap<>();
+ResultSet rs = stme.executeQuery("select id, name from species");
+
+while (rs.next()) {
+    int id = rs.getInt(1);
+    String name = rs.getString(2);
+    idToNameMap.put(id, name);
+}
+----
+
+NOTE: JDBC starts column number from 1 (rather than 0)
+
+[source,java]
+----
+ResultSet rs = stmt.executeQuery("select count(*) from animal");
+
+if (rs.next())
+    System.out.println(rs.getInt(1));
+----
+
+=== Getting data from a column
+
+image::resultset_get_methods.png[]
+
+[source,java]
+----
+ResultSet rs = stmt.executeQuery("select date_born from animal where name = 'Elsa'");
+
+if (rs.next()) {
+    java.sql.Date date = rs.getDate(1);
+    LocalDate localDate = date.toLocalDate();
+    System.out.println(localDate);
+}
+----
+
+[source,java]
+----
+ResultSet rs = stmt.executeQuery("select date_bron from animal where name = 'Elsa'");
+
+if (rs.next()) {
+    java.sql.Time time = rs.getTime(1);
+    LocalTime localTime = time.toLocalTime();
+    System.out.println(localTime);
+}
+----
+
+[source,java]
+----
+ResultSet rs = stmt.executeQuery("select date_born from animal where name = 'Elsa'");
+
+if (rs.next()) {
+    java.sql.Timestamp timestamp = rs.getTimeStamp(1);
+    LocalDateTime localDateTime = timestamp.toLocalDateTime();
+}
+----
+
+- As you can see, when calling `getDate`, JDBC returns just the date part, and calling get time JDBC returns just the time part, and when calling `getTimestamp`, it returns both date and time.
+
+image::jdbc_date_and_time_types.png[]
+
+[source,java]
+----
+ResultSet rs = stmt.executeQuery("select id, name from species");
+
+while (rs.next()) {
+    Object idField = rs.getObject("id");
+    Object nameField = rs.getObject("name");
+
+    if (idFiled instanceof Integer) {
+        int id = (Integer) idField;
+    }
+
+    if (nameField instanceof String) {
+        String name = (String) nameField;
+    }
+}
+----
+
+=== Scrolling `ResultSet`
+
+image::first_and_last.png[]
+
+- For the picture above
+[source,java]
+----
+Statement stmt = conn.createStatement(
+    ResultSet.TYPE_SCROLL_INSENSITIVE,
+    ResultSet.CONCUR_READ_ONLY
+);
+
+ResultSet rs = stmt.executeQuery("select id from species order by id");
+
+rs.afterLast();
+
+rs.previous(); // true
+rs.getInt(1); // 2
+rs.previous(); // true
+rs.getInt(1); // 1
+rs.first(); // true
+rs.getInt(1); // 1
+rs.beforeFirst();
+rs.getInt(1); // throws SQLException
+----
+
+[source,java]
+----
+Statement stmt = conn.createStatement(
+    ResultSet.TYPE_SCROLL_INSENSITIVE,
+    Resultset.CONCUR_READ_ONLY
+);
+
+ResultSet rs = stmt.executeQuery("select id from species where id = -999");
+rs.first(); // false
+rs.last(); // false
+----
+
+- `absolute(rowNumber)`
+
+image::absolute_rows.png[]
+
+- `absolute(negativeRowNumber)`
+
+image::absolute_negative_rows.png[]
+
+Example:
+
+image::absolute_examples.png[]
+
+[source,java]
+----
+Statement stmt = conn.createStatement(
+    ResultSet.TYPE_SCROLL_INSENSITIVE,
+    ResultSet.CONCUR_READ_ONLY
+);
+
+ResultSet rs = stmt.executeQuery("select id from animal order by id");
+
+rs.absolute(2); // true
+rs.getString(1); // 2
+rs.absolute(0); // false
+rs.absolute(5); // true
+rs.getInt(1); // 5
+rs.absolute(-2); // true
+rs.getString("id"); // 4
+----
+
+- `relative(rows)` to move forward or backward number of rows from the current row
+
+[source,java]
+----
+Statement stmt = conn.createStatement(
+    ResultSet.TYPE_SCROLL_INSENSITIVE,
+    ResultSet.CONCUR_READ_ONLY
+);
+
+ResultSet rs = stmt.executeQuery("select id from animal order by id");
+
+rs.next(); // true
+rs.getString("id"); // 1
+rs.relative(2);
+rs.getString("id"); // 3
+rs.relative(-1); // true
+rs.getInt(id); // 2
+rs.relative(4); // false
+----
+
+== Closing Database Resources
+
+[source,java]
+----
+public static void main(String[] args) {
+    String url = "jdbc:derby:zoo";
+    try (Connection conn = DriverManager.getConnection(url);
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery("select name from animal")) {
+        
+        while (rs.next()) {
+            rs.getString(1);
+        }
+    }
+}
+----
+
+- Closing a `Connection` also closes the `Statement` and `ResultSet`
+
+- Closing a `Statement` also closes the `ResultSet`
+
+NOTE: JDBC automatically closes the `ResultSet` when you execute another query on the same statement.
+
+[source,java]
+----
+String url = ":jdbc:derby:zoo";
+
+try (Conncetion conn = DriverManager.getConnection(url);
+    Statement stmt = conn.createStatement();
+    ResultSet rs = stmt.executeQuery("select count(*) from animal")) {
+        ResultSet rs2 = stmt.executeQuery("select count(*) from animal"); // close rs1
+        int num = stmt.executeUpdate("update animal set name = 'clear' where name = 'other'"); // close rs2
+    }
+----
+
+== Dealing with Exceptions
+
+[source,java]
+----
+String url = "jdbc:derby:zoo";
+
+try (Connection conn = DriverManager.getConnection(url);
+    Statement stmt = conn.createStatement();
+    ResultSet rs = stmt.executeQuery("select other from animal")) {
+        while (rs.next()) 
+            res.getString(1);
+} catch (SQLException e) {
+    e.getMessage();
+    e.getSQLState();
+    e.getErrorCode();
+}
+----
+
+
+== Review
+
+- Modern JARs contain a file `META-INF/service` called `java.sql.Driver`. This is the name of the implementation class of Driver. Older JARS requires you to call `Class.forName()` to load driver.
+
+- An `SQL` exception will be thrown if you use `absolute(0)`.
+
+- `Driver`, `Connection`, 'Statement' and `ResultSet` interfaces are part of the JDK. The concrete `DriverManager` class is also part of the JDK.
+
+- Driver's implementation and Statement's implemenation are in database-specific JAR file.
+
+- Database name is required.
+
+- When a `Statement` is requested with an unsupported mode, the JDBC driver will downgrade the request to the one that is supported.
+
+- A `Statement` automatically close the open `ResultSet` when another SQL statement is run.
+
+- In a `ResultSet`, columns start at 1
+
+- `beforeFirst()` and `afterLast()` do not return anything.
+
+- `rs.relative(-100)`, if the result only has 99 row, the cursor will be at the row before the first row of the result.

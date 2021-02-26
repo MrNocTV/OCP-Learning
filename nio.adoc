@@ -1,0 +1,914 @@
+:doctype: article
+:encoding: utf-8
+:lang: en
+:toc: left
+:toclevels: 3
+:source-highlighter: highlightjs
+:icons: fontt
+:imagesdir: images
+:sectnums:
+
+== Preface
+
+- Unlike the old stream in `java.io`, which is blocking and you cannot go back and forth while reading the data (stream only has 1 flow), new NIO.2 introducing the new *channel concept*, it is non-blocking, and you can read data back and forth.
+
+== Introducing `Path`
+
+- The java.nio.file.Path interface, or Path interface for short, is the primary entry point for working with the NIO.2 API.
+
+- Unlike `File`, `Path` supports symbolic link.
+
+- A symbolic link is *a special file* within an operating system that serves as a reference or pointer to another file or directory.
+
+- The NIO.2 API includes full support
+for creating, detecting, and navigating symbolic links within the file system.
+
+=== Creating Instances with Factory and Helper Classes
+
+image::nio_interface_class_relationship.png[]
+
+[source,java]
+----
+Path path1 = Paths.get("pandas/cuddly.png");
+Path path2 = Paths.get("c:\\zooinfo\\November\\employees.txt");
+Path path3 = Paths.get("/home/zoodirector");
+----
+
+- `System.getProperty("path.separator")`
+can be used to get the operating system-dependent file separator from the JVM
+
+[source,java]
+----
+Path path1 = Paths.get("pandas","cuddly.png");
+Path path2 = Paths.get("c:","zooinfo","November","employees.txt");
+Path path3 = Paths.get("/","home","zoodirector");
+----
+
+- Another way to construct a Path using the Paths class is with a URI value. A *uniform
+resource identifier* (URI) is a string of characters that identify a resource It begins with
+a schema that indicates the resource type, followed by a path value. Examples of schema
+values include file:// , http:// , https:// , and ftp:// .
+
+[source,java]
+----
+Path path1 = Paths.get(new URI("file://pandas/cuddly.png")); // THROWS EXCEPTION
+// AT RUNTIME
+Path path2 = Paths.get(new URI("file:///c:/zoo-info/November/employees.txt"));
+Path path3 = Paths.get(new URI("file:///home/zoodirectory"));
+----
+
+- URI must reference an absolute path at run time, otherwise an exception will be thrown.
+
+- Note that the constructor new URI(String) does throw a checked `URISyntaxException`.
+
+- Convert a `Path` back to `URI`
+[source,java]
+----
+Path path4 = Paths.get(new URI("http://www.wiley.com"));
+URI uri4 = path4.toUri();
+----
+
+=== Accessing the Underlying FileSystem Object
+
+[source,java]
+----
+Path path1 = FileSystems.getDefault().getPath("pandas/cuddly.png");
+Path path2 = FileSystems.getDefault().getPath("c:","zooinfo","November",
+"employees.txt");
+Path path3 = FileSystems.getDefault().getPath("/home/zoodirector");
+----
+
+- the FileSystems factory class does give us the ability to connect to a remote file system 
+
+[source,java]
+----
+FileSystem fileSystem = FileSystems.getFileSystem(new URI("http://www.selikoff.net"));
+Path path = fileSystem.getPath("duck.txt");
+----
+
+*The power of the NIO.2 API here is that it lets us rely on the default file system
+for files and directories as before, while giving us the ability to build more-complex
+applications that reference external file systems.*
+
+=== Working with Legacy File Instances
+
+When Path was added in Java 7, the legacy `java.io.File` class was updated with a new
+method, toPath() , that operates on an instance File variable:
+
+[source,java]
+----
+File file = new File("pandas/cuddly.png");
+Path path = file.toPath();
+----
+For backward compatibility, the Path interface also contains a method toFile () to
+return a File instance:
+
+[source,java]
+----
+Path path = Paths.get("cuddly.png");
+File file = path.toFile();
+----
+
+== Interacting with Paths and Files
+
+- most operations
+available in the Path and Paths classes can be accomplished regardless of whether the
+underlying file that the Path object references actually exists. For example, retrieving
+the parent or root directory of a Path object does not require the file to exist, although
+the JVM may access the underlying file system to know how to process the path
+information.
+
+=== Providing Optional Arguments
+
+image::common_optional_arguments.png[]
+
+- If the file
+system does not support this feature, an AtomicMoveNotSupportedException will be thrown.
+
+=== Using Path Objects
+
+- Many of the methods in the Path interface transform the path value in some way and
+return a new Path object, allowing the methods to be chained.
+
+[source,java]
+----
+Paths.get("/zoo/../home").getParent().normalize().toAbsolutePath();
+----
+
+=== Viewing the Path with toString(), getNameCount(), ­and getName()
+
+- toString() , returns a String representation of
+the entire path. In fact, it is the only method in the Path interface to return a String .
+
+[source,java]
+----
+Path path = Paths.get("/land/hippo/harry.happy");
+System.out.println("The Path Name is: "+path);
+for(int i=0; i<path.getNameCount(); i++) {
+    System.out.println("Element "+i+" is: "+path.getName(i));
+}
+----
+
+----
+The Path Name is: /land/hippo/harry.happy
+Element 0 is: land
+Element 1 is: hippo
+Element 2 is: harry.happy
+----
+
+- Notice that the root element / is not included in the list of names. If the Path object
+represents the root element itself, then the number of names in the Path object returned by
+getNameCount() will be 0 .
+What if we ran the preceding code using the relative path land/hippo/harry.happy ?
+
+----
+The Path Name is: land/hippo/harry.happy
+Element 0 is: land
+Element 1 is: hippo
+Element 2 is: harry.happy
+----
+
+Notice that the individual names are the same. For the exam, you should be aware that
+the getName(int) method is zero-indexed, with the file system root excluded from the path
+components.
+
+=== Accessing Path Components with getFileName(), getParent(), and getRoot()
+
+- getParent() , returns a Path instance representing the parent path or
+null if there is no such parent. If the instance of the Path object is relative, this method will
+stop at the top-level element defined in the Path object. In other words, it will not traverse
+outside the working directory to the file system root.
+
+- getRoot() , returns the root element for the Path object or null if the
+Path object is relative
+
+[source,java]
+----
+import java.nio.file.*;
+public class PathFilePathTest {
+    public static void printPathInformation(Path path) {
+        System.out.println("Filename is: " + path.getFileName());
+        System.out.println("Root is: " + path.getRoot());
+        Path currentParent = path;
+        while((currentParent = currentParent.getParent()) != null) {
+            System.out.println("
+            Current parent is: "+currentParent);
+        }
+    }
+    public static void main(String[] args) {
+        printPathInformation(Paths.get("/zoo/armadillo/shells.txt"));
+        System.out.println();
+        printPathInformation(Paths.get("armadillo/shells.txt"));
+    }
+}
+----
+
+----
+Filename is: shells.txt
+Root is: /
+Current parent is: /zoo/armadillo
+Current parent is: /zoo
+Current parent is: /
+
+Filename is: shells.txt
+Root is: null
+Current parent is: armadillo
+----
+
+=== Checking Path Type with isAbsolute() and toAbsolutePath()
+
+[source,java]
+----
+Path path1 = Paths.get("C:\\birds\\egret.txt");
+System.out.println("Path1 is Absolute? "+path1.isAbsolute());
+System.out.println("Absolute Path1: "+path1.toAbsolutePath());
+Path path2 = Paths.get("birds/condor.txt");
+System.out.println("Path2 is Absolute? "+path2.isAbsolute());
+System.out.println("Absolute Path2 "+path2.toAbsolutePath());
+----
+
+----
+Path1 is Absolute? true
+Absolute Path1: C:\birds\egret.txt
+Path2 is Absolute? false
+Absolute Path2 /home/birds/condor.txt
+----
+
+- Keep in mind that if the Path object already represents an absolute path, then the output
+is a new Path object with the same value.
+
+=== Creating a New Path with subpath()
+
+- The method subpath(int,int) returns a relative subpath of the Path object, referenced
+by an inclusive start index and an exclusive end index
+
+[source,java]
+----
+Path path = Paths.get("/mammal/carnivore/raccoon.image");
+System.out.println("Path is: "+path);
+System.out.println("Subpath from 0 to 3 is: "+path.subpath(0,3));
+System.out.println("Subpath from 1 to 3 is: "+path.subpath(1,3));
+System.out.println("Subpath from 1 to 2 is: "+path.subpath(1,2));
+----
+
+- You might notice that the subpath() and getName(int) methods are similar in that
+they both return a Path object that represents a component of an existing Path . The
+difference is that the subpath() method may include multiple path components, whereas
+the getName(int) method only includes one.
+
+----
+Path is: /mammal/carnivore/raccoon.image
+Subpath from 0 to 3 is: mammal/carnivore/raccoon.image
+Subpath from 1 to 3 is: carnivore/raccoon.image
+Subpath from 1 to 2 is: carnivore
+----
+
+The following two examples both throw java.lang.IllegalArgumentException at
+runtime:
+
+[source,java]
+----
+System.out.println("Subpath from 0 to 4 is: "+path.subpath(0,4)); // THROWS
+// EXCEPTION AT RUNTIME
+System.out.println("Subpath from 1 to 1 is: "+path.subpath(1,1)); // THROWS
+// EXCEPTION AT RUNTIME
+----
+
+=== Using Path Symbols, relativize()
+
+- The Path interface provides a method relativize(Path) for constructing the relative
+path from one Path object to another.
+
+[source,java]
+----
+Path path1 = Paths.get("fish.txt");
+Path path2 = Paths.get("birds.txt");
+System.out.println(path1.relativize(path2));
+System.out.println(path2.relativize(path1));
+----
+
+----
+..\birds.txt
+..\fish.txt
+----
+
+[source,java]
+----
+Path path3 = Paths.get("E:\\habitat");
+Path path4 = Paths.get("E:\\sanctuary\\raven");
+System.out.println(path3.relativize(path4));
+System.out.println(path4.relativize(path3));
+----
+
+----
+..\sanctuary\raven
+..\..\habitat
+----
+
+NOTE: Note that the file system is not accessed to perform this comparison. For example, the root
+path element E: may not exist in the file system, yet the code would execute without issue
+since Java is referencing the path elements and not the actual file values.
+
+NOTE: The `relativize()` method requires that both paths be absolute or both relative, and
+it will throw an `IllegalArgumentException` if a relative path value is mixed with an
+absolute path value
+
+[source,java]
+----
+Path path1 = Paths.get("/primate/chimpanzee");
+Path path2 = Paths.get("bananas.txt");
+Path1.relativize(path3); // THROWS EXCEPTION AT RUNTIME
+----
+
+NOTE: On Windows-based systems, it also requires that if absolute paths are used, then both
+paths must have the same root directory or drive letter. For example, the following would
+also throw an IllegalArgumentException at runtime in a Windows-based system since
+they use different roots:
+
+[source,java]
+----
+Path path3 = Paths.get("c:\\primate\\chimpanzee");
+Path path4 = Paths.get("d:\\storage\\bananas.txt");
+path3.relativize(path4); // THROWS EXCEPTION AT RUNTIME
+----
+
+=== Joining Path Objects with resolve()
+
+[source,java]
+----
+final Path path1 = Paths.get("/cats/../panther");
+final Path path2 = Paths.get("food");
+System.out.println(path1.resolve(path2));
+----
+
+output
+----
+/cats/../panther/food
+----
+
+- If both paths are absolute, the new Path object with the path of the second one will be returned
+
+[source,java]
+----
+final Path path1 = Paths.get("/turkey/food");
+final Path path2 = Paths.get("/tiger/cage");
+System.out.println(path1.resolve(path2));
+----
+
+output
+----
+/tiger/cage
+----
+
+=== Cleaning Up a Path with normalize()
+
+[source,java]
+----
+Path path3 = Paths.get("E:\\data");
+Path path4 = Paths.get("E:\\user\\home");
+Path relativePath = path3.relativize(path4);
+System.out.println(path3.resolve(relativePath));
+----
+
+output
+----
+E:\data\..\user\home
+----
+
+apply `normalize()`
+[source,java]
+----
+System.out.println(path3.resolve(relativePath).normalize());
+----
+
+----
+E:\user\home
+----
+
+- Like relativize() , the normalize() method does not check that the file actually exists.
+
+=== Checking for File Existence with toRealPath()
+
+- It is similar to the `toAbsolutePath()` method in that it can convert a relative path
+to an absolute path, except that it also verifies that the file referenced by the path actually exists, and thus it throws a checked `IOException` at runtime if the file cannot be located.
+
+- The toRealPath() method performs additional steps, such as removing redundant path
+elements. In other words, it implicitly calls normalize() on the resulting absolute path.
+
+- Let’s say that we have a file system in which we have a symbolic link from food.source
+to food.txt , as described in the following relationship:
+/zebra/food.source → /horse/food.txt
+
+- Assuming that our current working directory is /horse/schedule , then consider the
+following code:
+
+[source,java]
+----
+try {
+    System.out.println(Paths.get("/zebra/food.source").toRealPath());
+    System.out.println(Paths.get(".././food.txt").toRealPath());
+} catch (IOException e) {
+    // Handle file I/O exception...
+}
+----
+
+output
+----
+/horse/food.txt
+/horse/food.txt
+----
+
+- Get access to the current working directory
+[source,java]
+----
+System.out.println(Paths.get(".").toRealPath());
+----
+
+=== Testing a Path with exists()
+
+[source,java]
+----
+Files.exists(Paths.get("/ostrich/feathers.png"));
+Files.exists(Paths.get("/ostrich"));
+----
+
+=== Testing Uniqueness with isSameFile()
+
+The `isSameFile()` method first checks if the `Path` objects are equal in terms of `equal()` ,
+and if so, it automatically returns true without checking to see if either file exists. If the
+Path object `equals()` comparison returns `false` , then it locates each file to which the
+path refers in the file system and determines if they are the same, throwing a checked
+`IOException` if either `file` does not exist.
+
+- Assuming all files in the examples exist, and cobra is a symbolic link to the snake file
+
+[source,java]
+----
+try {
+    System.out.println(Files.isSameFile(Paths.get("/user/home/cobra"),
+    Paths.get("/user/home/snake")));
+    System.out.println(Files.isSameFile(Paths.get("/user/tree/../monkey"),
+    Paths.get("/user/monkey")));
+    System.out.println(Files.isSameFile(Paths.get("/leaves/./giraffe.exe"),
+    Paths.get("/leaves/giraffe.exe")));
+    System.out.println(Files.isSameFile(Paths.get("/flamingo/tail.data"),
+    Paths.get("/cardinal/tail.data")));
+} catch (IOException e) {
+    // Handle file I/O exception...
+}
+----
+
+Output
+----
+true
+true
+true
+false
+----
+
+- in the second line, `..` cancel out `/tree`
+- in the third line `.` makes the path unmodified.
+
+=== Making Directories with createDirectory() and createDirectories()
+
+- The directory-creation methods can throw the checked IOException , such as when
+the directory cannot be created or already exists.
+
+- for `createDirectory()`, if the parent directory does not exist, an exception will be thrown.
+
+[source,java]
+----
+try {
+    Files.createDirectory(Paths.get("/bison/field"));
+    Files.createDirectories(Paths.get("/bison/field/pasture/green"));
+} catch (IOException e) {
+    // Handle file I/O exception...
+}
+----
+
+=== Duplicating File Contents with copy()
+
+- `Files.copy(Path,Path)`
+
+- Directory copies are shallow rather than deep, meaning that files and subdirectories
+within the directory are not copied
+
+[source,java]
+----
+try {
+    Files.copy(Paths.get("/panda"), Paths.get("/panda-save"));
+    Files.copy(Paths.get("/panda/bamboo.txt"),Paths.get("/panda-save/bamboo.txt"));
+} catch (IOException e) {
+// Handle file I/O exception...
+}
+----
+
+=== Copying files with java,io and nio2
+
+[source,java]
+----
+try (InputStream is = new FileInputStream("source-data.txt");
+OutputStream out = new FileOutputStream("output-data.txt")) {
+    // Copy stream data to file
+    Files.copy(is, Paths.get("c:\\mammals\\wolf.txt"));
+    // Copy file data to stream
+    Files.copy(Paths.get("c:\\fish\\clown.xsl"), out);
+} catch (IOException e) {
+// Handle file I/O exception...
+}
+----
+
+NOTE: The `Files.move()` method can be applied to non-empty directories only if
+they are on the same underlying drive. While moving an empty directory
+across a drive is supported, moving a non-empty directory across a drive
+will throw an NIO.2 `DirectoryNotEmptyException` .
+
+=== Removing a File with delete() and deleteIfExists()
+
+- If the directory is non-empty , an exception will be thrown.
+
+- If the target of the path is a symbolic link, only the link will be deleted.
+
+[source,java]
+----
+try {
+    Files.delete(Paths.get("/vulture/feathers.txt"));
+    Files.deleteIfExists(Paths.get("/pigeon"));
+} catch (IOException e) {
+// Handle file I/O exception...
+}
+----
+
+=== Reading and Writing File Data with newBufferedReader() and newBufferedWriter()
+
+- `Files.newBufferedReader(Path,Charset)`
+
+- Charset.defaultCharset() can be used to get the default Charset for the JVM.
+
+[source,java]
+----
+Path path = Paths.get("/animals/gopher.txt");
+try (BufferedReader reader = Files.newBufferedReader(path,
+    Charset.forName("US-ASCII"))) {
+    // Read from the stream
+    String currentLine = null;
+    while((currentLine = reader.readLine()) != null)
+        System.out.println(currentLine);
+} catch (IOException e) {
+// Handle file I/O exception...
+}
+----
+
+[source,java]
+----
+Path path = Paths.get("/animals/gorilla.txt");
+List<String> data = new ArrayList();
+try (BufferedWriter writer = Files.newBufferedWriter(path,Charset.forName("UTF-16"))) {
+    writer.write("Hello World");
+} catch (IOException e) {
+// Handle file I/O exception...
+}
+----
+
+=== Reading Files with readAllLines()
+
+[source,java]
+----
+Path path = Paths.get("/fish/sharks.log");
+try {
+    final List<String> lines = Files.readAllLines(path);
+    for(String line: lines) {
+        System.out.println(line);
+    }
+} catch (IOException e) {
+// Handle file I/O exception...
+}
+----
+
+== Understanding File Attributes
+
+- metadata is data that describes other data.
+
+=== Reading Common Attributes with isDirectory(), isRegularFile(), and isSymbolicLink()
+
+- `Files.isDirectory(Path)`: true if Path is a symbolic link to a directory or a directory
+- `Files.isRegularFile(Path)`: true if Path is a symbolic link to a file or a file
+- `Files.isSymbolicLink(Path)`
+
+- it is possible for `isRegularFile()` to return
+true for a symbolic link, as long as the link resolves to a regular file.
+
+- these three methods do not throw checked exception
+
+[source,java]
+----
+Files.isDirectory(Paths.get("/canine/coyote/fur.jpg"));
+Files.isRegularFile(Paths.get("/canine/types.txt"));
+Files.isSymbolicLink(Paths.get("/canine/coyote"));
+----
+
+=== Checking File Visibility with isHidden()
+
+- `Files.isHidden(Path)`: throw checked exception   
+
+- Linux- or Mac-based systems, this
+is often denoted by file or directory entries that begin with a period character ( . ), while
+in Windows-based systems this requires the hidden attribute to be set
+
+[source,java]
+----
+try {
+    System.out.println(Files.isHidden(Paths.get("/walrus.txt")));
+} catch (IOException e) {
+// Handle file I/O exception...
+}
+----
+
+=== Testing File Accessibility with isReadable() and isExecutable()
+
+- `Files.isReadable(Path)` and `Files.isExecutable(Path)`
+
+- Do not throw checked exception
+
+[source,java]
+----
+System.out.println(Files.isReadable(Paths.get("/seal/baby.png")));
+System.out.println(Files.isExecutable(Paths.get("/seal/baby.png")));
+----
+
+- Note that the file extension does not necessary determine whether a file is executable.
+
+=== Reading File Length with size()
+
+- `Files.size(Path)`
+
+[source,java]
+----
+try {
+    System.out.println(Files.size(Paths.get("/zoo/c/animals.txt")));
+} catch (IOException e) {
+// Handle file I/O exception...
+}
+----
+
+=== Managing File Modifications with getLastModifiedTime() and setLastModifiedTime()
+
+- `Files.getLastModifiedTime(Path): FileTime`
+
+- `Files.setLastModifiedTime(Path,FileTime)`
+
+- `FileTime.toMillis()`, `FileTime.fromMillis()`
+
+- It means we can change last modifed time without actually chaning the file content.
+
+[source,java]
+----
+try {
+    final Path path = Paths.get("/rabbit/food.jpg");
+    System.out.println(Files.getLastModifiedTime(path).toMillis());
+    Files.setLastModifiedTime(path,
+    FileTime.fromMillis(System.currentTimeMillis()));
+    System.out.println(Files.getLastModifiedTime(path).toMillis());
+} catch (IOException e) {
+// Handle file I/O exception...
+}
+----
+
+=== getOwner() and setOwner()
+
+- `Files.getOwner(Path): UserPrincipal`
+
+- `Files.setOwner(Path,UserPrincipal)`
+
+- Note that the operating system may intervene when you
+try to modify the owner of a fi le and block the operation. For example, a process running
+under one user may not be allowed to take ownership of a fi le owned by another user
+
+- In order to set a file owner to an arbitrary user, the NIO.2 API provides a
+`UserPrincipalLookupService` helper class for finding a `UserPrincipal` record for a
+particular user within a fi le system
+
+[source,java]
+----
+UserPrincipal owner = FileSystems.getDefault().getUserPrincipalLookupService().lookupPrincipalByName("jane");
+
+UserPrincipal owner = path.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByName("jane");
+----
+
+[source,java]
+----
+try {
+    // Read owner of file
+    Path path = Paths.get("/chicken/feathers.txt");
+    System.out.println(Files.getOwner(path).getName());
+    // Change owner of file
+    UserPrincipal owner = path.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByName("jane");
+    Files.setOwner(path, owner);
+    // Output the updated owner information
+    System.out.println(Files.getOwner(path).getName());
+} catch (IOException e) {
+// Handle file I/O exception...
+}
+----
+
+=== Improving access with view
+
+- A file may support multiple views, allowing you to retrieve and
+update various sets of information about the file.
+
+- `Files.readAttributes(Path, Class<A>)` returns read-only view of file attribute.
+
+- `Files.getFileAttributeView()`, returns the underlying attribute view and provides a direct resource for modifying file information.
+
+image::the_attribute_and_view_classes.png[]
+
+== Reading Attributes
+
+=== BasicFileAttributes
+
+[source,java]
+----
+import java.io.IOException;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+public class BasicFileAttributesSample {
+    public static void main(String[] args) throws IOException {
+        Path path = Paths.get("/turtles/sea.txt");
+        BasicFileAttributes data = Files.readAttributes(path, BasicFileAttributes.class);
+        System.out.println("Is path a directory? "+data.isDirectory());
+        System.out.println("Is path a regular file? "+data.isRegularFile());
+        System.out.println("Is path a symbolic link? "+data.isSymbolicLink());
+        System.out.println("Path not a file, directory, nor symbolic link? "+
+        data.isOther());
+        System.out.println("Size (in bytes): "+data.size());
+        System.out.println("Creation date/time: "+data.creationTime());
+        System.out.println("Last modified date/time: "+data.lastModifiedTime());
+        System.out.println("Last accessed date/time: "+data.lastAccessTime());
+        System.out.println("Unique file identifier (if available): "+
+        data.fileKey());
+    }
+}
+----
+
+=== Modifying Attributes
+
+- BasicFileAttributeView is used to modify a file’s set of date/time values.
+
+[source,java]
+----
+import java.io.IOException;
+import java.nio.file.*;
+import java.nio.file.attribute.*;
+
+public class BasicFileAttributeViewSample {
+
+    public static void main(String[] args) {
+        Path path = Paths.get("/turtles/sea.txt");
+        BasicFileAttributeView view = Files.getFileAttributeView(path BasicFileAttributeView.class);
+        BasicFileAttributes data = view.readAttributes();
+        FileTime lastModifiedTime = FileTime.fromMillis(data.lastModifiedTime().toMillis()+10_000);
+        view.setTimes(lastModifiedTime,null,null);
+    }
+
+}
+----
+
+== Presenting the New Stream methods
+
+=== Walking the directory
+
+- `Files.walk(path)` returns a `Stream<Path>` object that traverse the directory in a depth-first, lazy manner.
+
+- By default, the method iterates up to `Integer.MAX_VALUE` directories deep.
+
+[source,java]
+----
+try {
+    Files.walk(path)
+        .filter(p -> p.toString().endsWith(".java"))
+        .forEach(System.out::println);
+} catch (IOException e) {
+
+}
+----
+
+=== Avoiding Circular Paths
+
+- If you have a situation where you need to change the default behavior and traverse
+symbolic links, NIO.2 offers the FOLLOW_LINKS option as a vararg to the walk() method.
+It is recommended to specify an appropriate depth limit when this option is used. Also, be
+aware that when this option is used, the walk() method will track the paths it has visited,
+throwing a FileSystemLoopException if a cycle is detected.
+
+=== Searching a Directory
+
+- `Files.find(Path,int,BiPredicate<Path, BasicFileAttributes>)` behaves in a similar manner as the `Files.walk()` method, except that it requires the depth value to be explicitly set a long with a `BiPredicate` to filter the data.
+
+[source,java]
+----
+Path path = Paths.get("/bigcats");
+long dateFilter = 1420070400000l;
+try {
+    Stream<Path> stream = Files.find(path, 10,
+        (path,attributes) -> path.toString().endsWith(".java")
+        && attributes.lastModifiedTime().toMillis()>dateFilter);
+    stream.forEach(System.out::println);
+} catch (Exception e) {
+    // Handle file I/O exception...
+}
+----
+
+=== Listing Directory Contents
+
+- `Files.list()` is the same as `File.listFiles()` 
+
+[source,java]
+----
+try {
+   Path path = Paths.get("ducks");
+    Files.list(path)
+        .filter(p -> !Files.isDirectory())
+        .map(p -> p.toAbsolutePath())
+        .forEach(System.out::println);
+} catch (IOException e) {
+}
+----
+
+=== Printing File Contents
+
+- using `File.readAllLines()` to read content of a large file might result in `OutOfMemoryError`, use `Files.lines(Path)` instead.
+
+The contents of the file are read and processed lazily,
+which means that only a small portion of the file is stored in memory at any given time.
+ 
+[source,java]
+----
+Path path = Paths.get("/fish/sharks.log");
+try {
+    Files.lines(path).forEach(System.out::println);
+} catch (IOException e) {
+    // Handle file I/O exception...
+}
+----
+
+[source,java]
+----
+Path path = Paths.get("/fish/sharks.log");
+try {
+    System.out.println(Files.lines(path)
+        .filter(s -> s.startsWith("WARN "))
+        .map(s -> s.substring(5))
+        .collect(Collectors.toList());
+} catch (IOException e) {
+//
+}
+----
+
+image::legacy_file_vs_nio2.png[]
+
+== Checked vs Unchecked Methods
+
+== Exam notes
+
+[source,java]
+----
+Files.move(Paths.get("monkey.txt"), Paths.get("/animals"),
+StandardCopyOption.ATOMIC_MOVE,
+LinkOption.NOFOLLOW_LINKS);
+----
+
+- `Files.move(Path,Path)` if the file/directory already exists, an exception will be thrown.
+
+- `Files.move(path,path)` will move the symbolic link itself, rather than the file/directory.
+
+- `path.toAbsolutePath()` resolves the current directory with the path
+
+- calling `Files.resolve(Path)` with an absolute path as parameter will return the absolute path 
+
+[source,java]
+----
+Path path1 = Paths.get("./goat.txt").normalize(); // k1
+Path path2 = Paths.get("mule.png");
+Files.copy(path1,path2,StandardCopyOption.COPY_ATTRIBUTES);
+System.out.println(Files.isSameFile(path1, path2)); //k3
+----
+
+- even though the file is copied with reserved attributes, it is not the same.
+
+- if `Files.find` has 0 as depth, it will only search the top level directory, making the code below print nothing.
+
+[source,java]
+----
+Path path = Paths.get("/monkeys");
+Files.find(path, 0, (p,a) -> a.isSymbolicLink()).map(p -> p.toString())
+    .collect(Collectors.toList()) // y2
+    .stream() // y3
+    .filter(x -> x.toString().endsWith(".txt")) // y4
+    .forEach(System.out::println);
+----
+
+- keep in mind: if we have access to read the file???
+
+- `path.equals(Path)` check if they have the same string value of the path.
+
+- `getNameCount()` of Path '.' (current directory) is 1.

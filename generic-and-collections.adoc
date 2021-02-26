@@ -1,0 +1,465 @@
+:doctype: article
+:encoding: utf-8
+:lang: en
+:toc: left
+:toclevels: 3
+:source-highlighter: highlightjs
+:icons: fontt
+:imagesdir: images
+:sectnums:
+
+
+- The Java Collections frameworks include classes that implement List, Set, Map, and Queue interface.
+
+- array returns by `Arrays.asList` is not resizeable, if call `add()` or `remove()` an exception will be thrown at run time.
+
+- if `Arrays.binarySearch` cannot find the number, it will return a value equals: - insert index - 1 (negate index)
+
+== The Diamon Operator
+
+== Working with Generics
+[source,java]
+----
+static void printNames(List list) {
+    for (int i = 0; i < list.size(); i++) {
+        String name = (String) list.get(i); // class cast exception
+        System.out.println(name);
+    }
+}
+public static void main(String[] args) {
+    List names = new ArrayList();
+    names.add(new StringBuilder("Webby"));
+    printNames(names);
+}
+----
+
+=== Type erasure
+- The process of replacing generic type with `Object` is referred to as type erasure.
+- Type erasure helps new code to be compatible with one Java code.
+- Due to type erasure, there are some things that you can not do with generic type
+
+** Call the constructor, new T() is not allowed
+** Create an array of that static type
+** Call instanceof , cannot call `instanceof List<Integer>` or `instanceof List<String>`, because due to type erasure, it looks the same to Java as List<Object>
+** Create static variable as generic type
+
+
+== Generic interfaces
+[source,java]
+----
+public interface Shippable<T> {
+    void ship(T t);
+}
+----
+
+There are three ways to implements this interface
+[source,java]
+----
+class ShippableRobotCrate implements Shippable<Robot> {
+    public void ship(Robot t) { }
+}
+
+class ShippableAbstractCrate<U> implements Shippable<U> {
+    public void ship(U t) { }
+}
+
+class ShippableCrate implements Shippable {
+    public void ship(Object t) { }
+}
+----
+
+
+== Generic methods
+[source,java]
+----
+public static <T> void sink(T t) { }
+public static <T> T identity(T t) { return t; }
+public static T noGood(T t) { return t; } // DOES NOT COMPILE, cannot resolve symbol T
+----
+
+- You cannot instantiate a generic, `new T();`, this is not allowed.
+
+- But you can return object that is generic.
+
+`return new Crate<T>();` is completely fine.
+
+=== Optionals syntax for invoking a Generic Method
+
+[source,java]
+----
+
+class Box {
+    public static <T> Crate<T> ship(T t) {
+        System.out.println("Preparing " + t);
+        return new Crate<T>();
+    }
+}
+
+Box.<String>ship("package");
+Box.<String[]>ship(args);
+----
+
+but this code will not work, you cannot instantiate directly using generic type
+
+[source,java]
+----
+
+public <T> void test(T t) {
+    new T(); // DOES NOT COMPILE
+}
+
+----
+
+=== Interact with legacy code
+[source,java]
+----
+class Dragon {}
+class Unicorn { }
+public class LegacyDragons {
+    public static void main(String[] args) {
+        List unicorns = new ArrayList();
+        unicorns.add(new Unicorn());
+        printDragons(unicorns);
+    }
+    private static void printDragons(List<Dragon> dragons) {
+        for (Dragon dragon: dragons) { // ClassCastException
+            System.out.println(dragon);
+        } 
+    } 
+}
+----
+
+- it shouldn't be a surprise that you can get `ClassCastException` in the other direction 
+
+[source,java]
+----
+public class LegacyUnicorns {
+    public static void main(String[] args) {
+        List<Unicorn> unicorns = new ArrayList<>();
+        addUnicorn(unicorns);
+        Unicorn unicorn = unicorns.get(0); // ClassCastException
+    }
+    private static void addUnicorn(List unicorn) {
+        unicorn.add(new Dragon());
+    } 
+}
+----
+
+- careful when expect premitive from generic collection with legacy code
+
+[source,java]
+----
+public class LegacyAutoboxing {
+    public static void main(String[] args) {
+        List numbers = new ArrayList();
+        numbers.add(5);
+        int result = numbers.get(0); // DOES NOT COMPILE
+    }
+}
+----
+
+== Bounds
+- A wildcard generic type is an unknown generic type represented with a question mark
+( ? ). You can use generic wildcards in three ways
+
+== Unbounded wildcard
+[source,java]
+----
+List<?> l = new ArrayList<String>();
+----
+An unbounded wildcard represents any data type (?).
+[source,java]
+----
+public static void printList(List<Object> list) {
+    for (Object x: list) 
+        System.out.println(x);
+}
+
+public static void main(String[] args) {
+    List<String> keywords = new ArrayList<>();
+    keywords.add("java");
+    printList(keywords); // DOES NOT COMPILE
+}
+----
+
+[source,java]
+----
+Object[] o = new String[0]; // this code compile
+----
+
+[source,java]
+----
+public static void printList(List<?> list) {
+    for (Object x: list)
+        System.out.println(x);
+}
+public static void main(String[] args) {
+    List<String> keywords = new ArrayList<>();
+    keywords.add("java");
+    printList(keywords);
+}
+----
+
+== Upperbound wildcard
+- For unbound and upperbound wildcard, the list becomes logically immutable
+
+[source,code]
+----
+static class Sparrow extends Bird {}
+static class Bird {}
+
+public static void main(String[] args) {
+    List<? extends Bird> birds = new ArrayList<Bird>();
+    birds.add(new Sparrow()); // does not compile
+    birds.add(new Bird()); // does not compile
+}
+----
+
+- Technically, you can remove element from the list.
+
+- The problem stems from the fact that Java doesnt know what type List<? extends Bird> is. It could be List<Bird> or List<Sparrow> or some other generic type.
+
+[source,java]
+----
+List<? extends Exception> l = new ArrayList<RuntimeException>();
+----
+
+== Lowerbound wildcard
+[source,java]
+----
+List<? super Exception> l = new ArrayList<Object>();
+----
+
+- even though you can add object into a lower bound list, there is a limit:
+
+[source,java]
+----
+List<? super IOException> exceptions = new ArrayList<Exception>();
+exceptions.add(new Exception()); // Does not compile
+exceptions.add(new IOException());
+exceptions.add(new FileNotFoundException());
+----
+
+- you can only add object of classes that is the lower bound itself or subclasses of the lower bound
+
+- you cannot specify the return type of a generic method as wildcard
+
+[source,java]
+----
+<T> <? extends T> method2(List<? extends T> list) { // DOES NOT COMPILE
+    return list.get(0);
+}
+----
+
+- normal code, however if there is a class named B, it will not compile
+
+[source,java]
+----
+class A{}
+
+<B extends A> B test(List<B> l) {
+    return (B) new A();
+}
+
+// other normal code
+
+<T extends Bird> void method2(List<? extends T> list) { }
+----
+
+[source,java]
+----
+<X> void method5(List<X super A> list) { }// DOES NOT COMPILE, unexpected bound
+<X> void method5(List<X extends A> list) {} // DOES NOT COMPILE unexpected bound
+<X> void method6(List<? extends A> list) {} // compile
+<X> void method7(List<? super A> list) { } // compile
+<X> X tests(List<? extends X> l) {return l.get(0);} // compile
+List<?> list = new ArrayList<? extends SomeClass>(); // DOES NOT COMPILE    
+----
+
+== list, queue, set, map
+
+- The `Collection` interface is the root of all collections except `Map`
+
+=== Commons Collections method
+
+- `Collection` methods
+
+[source,java]
+----
+boolean add(E element);
+boolean remove(Object object);
+boolean isEmpty();
+int size();
+boolean contains(Object o);
+void clear();
+----
+
+- `List` methods
+
+[source,java]
+----
+void add(E e);
+void add(int index, E e);
+E get(int index);
+int indexOf(Object o);
+int lastIndexOf(Object o);
+void remove(int index);
+E set(int index, E e);
+boolean removeIf(Predicate<? super E> filter);
+void replaceAll(UnaryOperator<E> o);
+----
+
+- `LinkedList` implements both `List` and `Queue`.
+
+- If you need a `Stack`, use `ArrayDeque` instead, because `Stack` extends `Vector`, it's slow.
+
+=== NavigableSet interface
+[source,java]
+----
+E lower(E element); // < element
+E higher(E element); // > element
+E floor(E element); // <= element
+E ceiling(E element); // >= element
+----
+
+=== Queue interface
+- ArrayDeque is more efficient than LinkedList, both are double-ended queue.
+
+[source,java]
+----
+E element(); // get next element or exception if empty
+E remove(); // remove next element or exception if empty
+boolean offer(E e);
+E poll();
+void push(E e);
+E pop();
+
+Queue<Integer> queue = new ArrayDeque<>();
+ArrayDeque<Integer> stack = new ArrayDeque<>();
+----
+
+=== Map
+- `HashMap`, `LinkedHashMap` (HashMap with order)
+- `TreeMap`
+- `Hashtable` is slow, because it's thread-safe
+
+- `Map` methods
+
+[source,java]
+----
+void clear();
+boolean isEmpty();
+int size();
+V get(Object key);
+V put(K key, V value);
+V remove(Object key);
+boolean containsKey(Object key);
+boolean containsValue(Object value);
+Set<K> keySet();
+Collection<V> values();
+
+// java 8
+putIfAbsent(key, value);
+merge(key, value, BiFunction);
+----
+
+[source,java]
+----
+BiFunction<String, String, String> mapper = (v1, v2) -> v1.length() > v2.length() ? v1 : v2;
+
+Map<String, String> favorites = new HashMap<>();
+favorites.put("Jenny", "Bus tour");
+favorites.put("Tom", "tom");
+favorites.put("Sam", null);
+
+favorites.merge("Jenny", "Skyride", mapper);
+favorites.merge("Tom", "Skyride", mapper);
+favorites.merge("Sam", "skyridex", mapper); // mapper is not called, simply assign the new value
+// {Jenny=Bus tour, Tom=Skyride, Sam=skyridex}
+----
+
+- if the mapper return `null`, calling it with `merge` will remove the key from the map
+
+=== Null
+- The data structures involve sorting do not allow null.
+
+- `ArrayDeque` cant contain null
+
+- `Hashtable` doesn't allow null keys or values.
+
+- `TreeMap` does not allow null keys
+
+=== Comparable interface (java.lang)
+[source,java]
+----
+public interface Comparable<T> {
+    public int compareTo(T o);
+}
+----
+
+=== Comparator interface (java.util)
+[source,java]
+----
+public interface Comparator<V> {
+    public int compare(V v1, V v2);
+}
+----
+
+== Method references
+[source,java]
+----
+public class DuckHelper {
+    public static int compareByWeight(Duck d1, Duck d2) {
+        return d1.getWeight() - d2.getWeight();
+    }
+}
+
+Comparator<Duck> byWeight = (d1, d2) -> DuckHelper.compareByWeight(d1, d2);
+Comparator<Duck> byWeight = DuckHelper::compareByWeight;
+----
+
+- There are 4 formats for method reference:
+
+
+* static methods
+
+[source]
+----
+Consumer<List<Integer>> methodRef1 = Collections::sort;
+Consumer<List<Integer>> lambda1 = l -> Collections.sort(l);
+----
+
+* instance method on instances
+
+[source]
+----
+String str = "abc";
+Predicate<String> methodRef = str::startsWith;
+Predicate<String> lambda = s -> str.startsWith(s);
+----
+
+* instance method on instances to be determined at run time
+
+[source]
+----
+Predicate<String> methodRef2 = String::isEmpty;
+----
+
+* constructors
+
+[source]
+----
+Supplier<ArrayList> methodRef = ArrayList::new
+Supplier<ArrayList> lambda = () -> new ArrayList();
+----
+
+=== merge, computeIfPresent, computeIfAbsent
+
+
+== NOTE
+
+- Type parameter cannot be instantiated directly
+
+- Queue `remove` takes an object param.
+
+- `Map map = new HashMap(); // this is ok` 

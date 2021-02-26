@@ -1,0 +1,236 @@
+:doctype: article
+:encoding: utf-8
+:lang: en
+:toc: left
+:toclevels: 3
+:source-highlighter: highlightjs
+:icons: font
+:imagesdir: images
+
+== Categories of exceptions
+
+image::exception-classes-hierarchy.png[]
+
+- IO, parsing and SQL exceptions are checked exceptions. Anything else are runtime exceptions.
+
+- try statement must have either or both catch/finally. try with resources is not required to have catch or finally.
+
+- cannot declare a catch block containing a checked exception that cannot be thrown by the try clause body.
+
+
+image::checked_exceptions.png[]
+image::unchecked_exceptions.png[]
+
+- most common structure defined by an Exception class
+
+[source,java]
+----
+public class CannotSwimException extends Exception {
+    public CannotSwimException() {
+        super();
+    }
+
+    public CannotSwimException(Exception e) {
+        super(e);
+    }
+
+    public CannotSwimException(String message) {
+        super(message);
+    }
+}
+----
+
+== Using multi catch
+- Java prevents you from specifying redundant exception in a multi catch
+
+[source,java]
+----
+try {
+    throw new IOException();
+} catch (FileNotFoundException | IOException e) {} // DOES NOT COMPILE
+----
+
+- It is allowed to reassign the variable in a catch block.
+
+[source,java]
+----
+try {
+    // do some work
+} catch(RuntimeException e) {
+    e = new RuntimeException();
+}
+----
+
+- But becareful if there is multiple types in multi catch block. With multi catch, we no longer have specific type of exception. Java forbids reassignning the exception variale in a multi-catch situation.
+
+[source,java]
+----
+try {
+
+} catch (IOException | RuntimeException e) {
+    e = new RuntimeException(); // DOES NOT COMPILE
+} 
+----
+
+- You cant list the same exception more than one in the same try block. This will not compile
+
+- If both catch and finally throw exception, the exception in finally is thrown.
+
+[source,java]
+----
+try {
+
+} catch (FileNotFoundException e) {
+
+} catch (FileNotFoundException e) { // DOES NOT COMPILE
+    
+}
+----
+
+- The multiple exception types in multi catch cannot have sub/superclass relationship.
+
+== Try with resources
+
+- Introduced since Java 7.
+
+- There is an implicit `finally` block, and it runs before any other `finally` block that you code it yourself.
+
+== Autoclosable
+
+- For the classes to be used in try with resource, they have to implements `AutoClosable` interface.
+
+- If the class implements `AutoClosable` throw checked exception in `close()` methods, the try-with-resource must catch that exception, or the surrounding code must have a `throws` declaration.
+
+[source,java]
+----
+public class StuckTurkeyCage implements AutoCloseable {
+    public void close() throws Exception {
+        throw new Exception("Cage door does not close");
+    }
+
+    public static void main(String[] args) {
+        try (StuckTurkeyCage t = new StuckTurkeyCage()) { // DOES NOT COMPILE
+            System.out.println("put turkeys in");
+        }
+    }
+}
+----
+
+- Java suggest the `close()` method should be idemponent, meaning the method can be called multiple times without any side effects or undesirable behavior on subsequent runs.
+
+== Closeable vs AutoClosable
+
+- AutoCloseable was introduced later.
+- Closeable is more strict than AutoClosable, it ristricts the type of exception thrown to IOException and requires the implementation of `close()` to be idempotent.
+- Closeable implements AutoClosable.
+- Closeable is in java.io package.
+
+== Suppressed exceptions
+
+- When multiple exceptions are thrown, all but first are called suppressed exception.
+
+- Suppressed exceptions applied to only exception that are thrown in `try clause`.
+
+Supposed we have a class implements AutoClosable and throw a catch exception in `close()`.
+
+[source,java]
+----
+public class JammedTurkeyCage implements AutoCloseable {
+    public void close() throws IllegalStateException {
+        throw new IllegalStateException("Cage door does not close");
+    }
+    public static void main(String[] args) {
+        try (JammedTurkeyCage t = new JammedTurkeyCage()) {
+            System.out.println("put turkeys in");
+            throw new IllegalStateException("throw in try");
+        } catch (IllegalStateException e) {
+            System.out.println("caught: " + e.getMessage());
+        }
+    }
+}
+----
+
+- The exception in `close()` method is called `suppressed exception`, because it's thrown after. Eventually, the main method would output something like the following:
+
+[source,java]
+----
+Exception in thread "main" java.lang.RuntimeException: turkeys ran off
+    atJammedTurkeyCage.main(JammedTurkeyCage.java:20)
+    Suppressed: java.lang.IllegalStateException: Cage door does not close
+    ...
+----
+
+- Java remembers the suppressed exceptions that go with a primary exception even if we don't handle them in the code.
+
+NOTE: Java close the resource in the reverse order from which it created them.
+
+- In the example bellow, `t2` is closed before `t1`.
+
+[source,java]
+----
+try (JammedTurkeyCage t1 = new JammedTurkeyCage();
+    JammedTurkeyCage t2 = new JammedTurkeyCage()) {
+        System.out.println("turkeys entered cages");
+    } catch (IllegalStateException e) {
+        System.out.println("caught: " + e.getMessage());
+        for (Throwable t: e.getSuppressed())
+            System.out.println(t.getMessage());
+}
+----
+
+- Suppressed exceptions apply only to exceptions thrown in try clause. The exception thrown in the finally block bellow is not suppressed exception, because the `finally` block is run after implicit `finally` run, which means the first exception has gone. This is due to Java backward compatible.
+
+[source,java]
+----
+try (JammedTurkeyCage t = new JammedTurkeyCage()) {
+    throw new IllegalStateException("turkeys ran off");
+} finally {
+    throw new RuntimeException("and we couldn't find them");
+}
+----
+
+- If multiple `close()` throw exception, the first one is the main exception, the others are suppressed exception.
+
+== Working with assertion
+
+- You can turn on assertion for testing and debugging while leaving them off when your program is in production.
+
+[source,java]
+----
+assert boolean_expression;
+assert boolean_expression : error_message;
+----
+
+- An assertion throws an AssertionError, since program are supposed to catch an Error, this means that assertion failure are fatal and end the program.
+
+- By default, assert statements are ignored by the JVM at run time. To enable assertion use, `-enableassertions` flag, or `-ea` for short.
+
+[source,shell]
+----
+java -enableassertions Rectangle
+java -ea Rectangle
+----
+
+- You can enable assertion on specific classes or packages.
+
+[source,shell]
+----
+java -ea:com.wiley.demos... my.programs.Main
+----
+
+- The three dots mean any specified package or subpackages.
+
+[source,shell]
+----
+java -ea:com.wiley.demos.TestColors my.programs.Main
+----
+
+- You can enable assertions for some classes and disable for other classes at the same time.
+
+[source,shell]
+----
+java -ea:com.wiley.demos... -da:com.wiley.demos.TestColors my.programs.Main
+----
+
+
+page 320

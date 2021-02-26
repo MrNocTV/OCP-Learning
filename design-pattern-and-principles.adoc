@@ -1,0 +1,100 @@
+:doctype: article
+:encoding: utf-8
+:lang: en
+:toc: left
+:toclevels: 3
+:source-highlighter: highlightjs
+:icons: fontt
+:imagesdir: images
+:sectnums:
+
+
+== Designing an interface
+
+- Interface can have `default` and `static` method.
+- `public static final` constants
+- You can obmit `Exception` in the overrided method of subclass.
+- Empty `interface` is called `marker interface`
+
+=== Functional interface
+
+[source,java]
+----
+@FunctionalInterface
+public interface Sprint {
+    public void sprint(Animal animal);
+}
+
+public class Tiger implements Sprint {
+    public void sprint(Animal animal) {
+        System.out.println("Animal is sprinting fast! "+animal.toString());
+    }
+}
+----
+
+=== Lambda
+- When one parameter has type, all of them must have type.
+
+- Predicate interface
+[source,java]
+----
+public interface Predicate<T> {
+    public boolean test(T t);
+}
+----
+
+[source,java]
+----
+import java.util.function.Predicate;
+public class FindMatchingAnimals {
+    private static void print(Animal animal, Predicate<Animal> trait) {
+        if(trait.test(animal))
+            System.out.println(animal);
+    }
+    public static void main(String[] args) {
+        print(new Animal("fish", false, true), a -> a.canHop());
+        print(new Animal("kangaroo", true, false), a -> a.canHop());
+    }
+}
+----
+
+[source,java]
+----
+public class Bird {}
+public class Fish {
+    public static void main(String[] args) {
+        Fish fish = new Fish();
+        Bird bird = (Fish)bird; // DOES NOT COMPILE
+    }
+}
+----
+
+[source,java]
+----
+public class Rodent {}
+public class Capybara extends Rodent {
+    public static void main(String[] args) {
+        Rodent rodent = new Rodent();
+        Capybara capybara = (Capybara)rodent; // Throws ClassCastException atruntime
+    }
+}
+----
+
+=== JavaBean
+- A JavaBean is a design principle for encapsulating data in an object in Java.
+
+== Design pattern
+
+=== Singleton
+- If all of the constructors declared `private` in the singleton class, then it is impossible to create a subclass with a valid constructor.
+
+- With applications that run accross multiple computers, Singleton might be implemented with a database or a queue server rather than a static object.
+
+=== Immutable object
+- Class or all methods inside class must be final
+
+=== Builder pattern
+
+=== Factory pattern
+
+page 103

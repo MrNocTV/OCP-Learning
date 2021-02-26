@@ -1,0 +1,969 @@
+:doctype: article
+:encoding: utf-8
+:lang: en
+:toc: left
+:toclevels: 3
+:source-highlighter: highlightjs
+:icons: fontt
+:imagesdir: images
+:sectnums:
+
+== Thread
+
+- A thread is a smallest unit of execution that can be scheduled by the operating system.
+
+- A process is a group of associated threads that can execute in the same, shared environment. single-thread prrocess and multi-thread process.
+
+- A task is a single unit of work performed by a thread.
+
+image::process_model.png[]
+
+== Thread type
+
+- System thread: created by JVM and runs in the background. Ex: garbage collection thread
+
+- User defined thread: created by the developer to accomplish some task. 
+
+- A daemon thread will not prevent the JVM from exiting when program finishes. -> A Java application terminates when the only threads that are running are daemon threads.
+
+- Ex: If the only thread running is garbage collection thread, the JVM will automatically shutdown. Both user-defined and system threads can be marked as daemon threads.
+
+== Understand thread concurrency
+
+- When a thread allotted time is complete but the thread has not finished processing, a context switch occur.
+
+- A context switch  is the process of storing a thread's current state and later restoring the state of the thread to continue execution.
+
+- Be default, a user thread has a Thread.NORM_PROPRITY value.
+
+- If two threads have the same priority, the thread schedular will arbitrarily choose the one to process first in most situation.
+
+== Runable
+
+[source,java]
+----
+@FunctionalInterface public interface Runnable {
+    void run();
+}
+----
+
+== Creating a Thread
+
+- There are two ways to create a Thread, 
+
+* provide a `Runable` object or lambda expression to the `Thread` constructor.
+
+* extends Thread class and override the `run()` method.
+
+[source,java]
+----
+public class PrintData implements Runnable {
+    public void run() {
+        for (int i = 0; i < 3; i++)
+            System.out.println("Printing record: "+i);
+    }
+
+    public static void main(String[] args) {
+        (new Thread(new PrinData())).start();
+    }
+}
+
+public class ReadInventoryThread extends Thread {
+    public void run() {
+        System.out.println("Printing zoo inventory");
+    }
+    public static void main(String[] args) {
+        (new ReadInventoryThread()).start();
+    }
+}
+----
+
+- While the following code snippet will compile, none will actually execute a task on a separate processing thread.
+
+[source,java]
+----
+new PrintData().run();
+(new Thread(new PrintData())).run();
+----
+
+== Thread vs Runnable
+
+- If you need to define your own Thread rules upon which multipel tasks will rely, such as priority Thread, extending Thread maybe preferable.
+
+- Implementing `Runnable` is often a better object-oriented design practice since it separates the task being performed from the Thread object performing it.
+
+- Implementing `Runnable` allows the class to be used by numerous Concurrency API classes.
+
+== Polling with sleep
+
+- Polling is the process of intermittently checking data at some fixed interval.
+
+== Creating Thread with ExecutorService
+
+[source,java]
+----
+import java.util.concurrent.*;
+public class ZooInfo {
+    public static void main(String[] args) {
+        ExecutorService service = null;
+        try {
+            service = Executors.newSingleThreadExecutor();
+            System.out.println("begin");
+            service.execute(() -> System.out.println("Printing zoo inventory"));
+            service.execute(() -> {for(int i=0; i<3; i++)
+                System.out.println("Printing record: "+i);}
+            );
+            service.execute(() -> System.out.println("Printing zoo inventory"));
+            System.out.println("end");
+        } finally {
+            if(service != null) service.shutdown();
+        }
+    }
+}
+----
+
+- With a single-thread executor, results are guaranteed to be executed in the order in which they are added to the executor service.
+
+- Once you have finished using a thread executor, it is important that you call the `shutdown()` method. A thread executor creates a non-daemon thread on the first task that is executed, so failing to call `shutdown()` will result in your application never terminating.
+
+- `shutdown()` will reject any new tasks submitted to the thread executor while continuinng to execute any previously sumitted tasks.
+
+- If a new task is submitted to the thread executor while it is shutting down, a RejectedExecutionException will be thrown.
+
+image::executor-service-life-cycle.png[]
+
+- `List<Runnable> shutdownNow()` attempts to stop all running tasks and discards any that have not been started yet. It returns a list of tasks that were never started.
+
+== Submitting Tasks
+
+- `void execute(Runnable r)`
+- `Future<?> submit(Runnable r)`
+- `<T> Future<T> submit(Callable<T> task)`: 
+- `<T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks) throws InterruptedException`: execute the given tasks, synchronously return the result of all tasks, in the same order with `Collection<? extends Callable<T>>`
+- <T> T invokeAny( Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException: execute the given tasks, synchronously return the result of one of finished tasks, cancelling any unfinished tasks.
+
+- With `invokeAll()`, even though Future.isDone() returns true for each
+element in the returned List , a task could have completed normally or thrown an exception.
+
+- With `invokeAny()`, while the first task to finish is often returned, this behavior is not guaranteed, as any completed task can be returned by this method.
+
+- We can set timeout for `invokeAll()` and `invokeAny()`.
+
+== Wating for results
+
+[source, java]
+----
+Future<?> future = service.submit(() -> System.out.println("Hello Zoo"));
+----
+
+image::future-methods.png[]
+
+[source,java]
+----
+import java.util.concurrent.*;
+public class CheckResults {
+    private static int counter = 0;
+    public static void main(String[] args) throws InterruptedException, ExecutionException {
+        ExecutorService service = null;
+
+        try {
+
+        } catch (TimeoutException e) {
+            service = Executors.newSingleThreadExecutor();
+            Future<?> result = service.submit(() -> {
+                for (int i = 0; i < 500; i++) CheckResults.counter++;
+            });
+
+            result.get(10, TimeUnit.SECONDS);
+            System.out.println("Reached!")
+        } finally {
+            if (service != null) service.shutdown();
+        }
+    }
+}
+----
+
+== Introducing Callable
+
+[source,java]
+----
+@FunctionalInterface public interface Callable<V> {
+    V call() throws Exception;
+}
+----
+
+=== Ambiguous lambda expression
+- Since both `Callable` and `Supplier` are functional interface, with 1 method that take no arguments and return a value. It's impossible for Java to know which one you want to use if there are two methods, 1 take Callable and 1 take Supplier
+
+[source,java]
+----
+public class AmbiguousLambdaSample {
+    public static void useCallable(Callable<Integer> expression) {}
+    public static void useSupplier(Supplier<Integer> expression) {}
+    public static void use(Supplier<Integer> expression) {}
+    public static void use(Callable<Integer> expression) {}
+    
+    public static void main(String[] args) {
+        useCallable(() -> {throw new IOException();}); //COMPILES
+        useSupplier(() -> {throw new IOException();}); // DOES NOT COMPILE
+        use(() -> {throw new IOException();}); // DOES NOT COMPILE
+    }
+}
+----
+
+- The second line of the main() method does not compile, as Supplier does not support check exception.
+
+- The last line in main method(), the compiler does not take into account that an exception is thrown in the body of use(), it does not know which `use()` should be used.
+
+- However, if you cast lambda expression, it will compile
+
+[source,java]
+----
+use((Callable<Integer>) () -> {throw new IOException("");}); //COMPILES
+----
+
+=== Example with Callable
+
+- `Future<?>` will always return `null` when calling `get()` if you `submit` a Runnable.
+
+[source,java]
+----
+import java.util.concurrent.*;
+
+public class AddData {
+    public static void main(String[] args) throws InterruptedException, ExecutionException{
+        ExecutorService service = null;
+        try {
+            service = Executors.newSingleThreadExecutor();
+            Future<Integer> result = service.submit(() -> 30 + 11);
+            System.out.println(result.get());
+        } finally {
+            if (service != null) service.shutdown();
+        }
+    }
+}
+----
+
+- `Runnable` and `Callable` are interchangable where the lambda does not throw an exception and there is no return type.
+
+=== Checked exception in Runnable and Callable
+
+[source,java]
+----
+service.submit(() -> {Thread.sleep(1000); return null;}) // COMPILES, because Java uses Callable
+service.submit(() -> {Thread.sleep(1000);}); //DOES NOT COMPILE, because Java use Runnable
+----
+
+WARNING: If the @FunctionalInterface throws checked exception, the caller might not need to use it in a try/catch block or redeclare the exception in throws.
+
+=== Waiting for all tasks to be finished
+
+- using `awaitTermination(long time, TimeUnit unit)`, this method waits until all tasks are finished, or throw InterruptedException.
+
+[source,java]
+----
+ExecutorService service = null;
+
+try {
+    service = Executors.newSingleThreadExecutor();
+    // add tasks to executor
+} finally {
+    if (service != null) service.shutdown();
+}
+
+if (service != null) {
+    service.awaitTermination(1, TimeUnit.MINUTES);
+    if (service.isTerminated())
+        System.out.println("All tasks finished");
+    else
+        System.out.println("At least one task is still running");
+}
+----
+
+== Scheduling Tasks
+
+[source,java]
+----
+ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
+----
+
+image::scheduled-executor-service-methods.png[]
+
+- The first two methods return a `ScheduledFuture<V>` instance.
+
+[source,java]
+----
+ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
+
+Runnable task1 = () -> System.out.println("Hello Zoo");
+Callable<String> task2 = () -> "Monkey";
+
+Future<?> result1 = service.schedule(task1, 10, TimeUnit.SECONDS);
+Future<?> result2 = service.schedule(task2, 8, TimeUnit.MINUTES);
+----
+
+- If the `ScheduledExecutorService` is shutdown by the time the scheduled task execution time is reached, they will be discarded.
+
+- `scheduleAtFixedRate()` is the closest built-in Java equivalent to Cron job in Linux.
+
+== Increasing concurrency with pools.
+
+image::executors-methods.png[]
+
+- Get the number of CPUs available:
+[source,java]
+----
+Runtime.getRuntime().availableProcessors();
+----
+
+== Synchronizing Data Access
+
+=== Processing Data with Atomic Classes
+
+image::atomic-classes.png[]
+
+image::common-atomic-methods.png[]
+
+== Improving access with Synchronized block
+
+- A monitor is a structure that supports mutual exclusion or the property that at most one thread is executing a particular segment of code at a given time.
+
+- In Java, any Object can be used as a monitor, along with synchronzied keyword.
+
+[source,java]
+----
+SheepManager manager = new SheepManager();
+
+synchronized(manager) {
+    // 
+}
+----
+
+- This code below prints 1 to 10.
+
+[source,java]
+----
+import java.util.concurrent.*;
+public class SheepManager {
+    private int sheepCount = 0;
+    private void incrementAndReport() {
+        synchronized(this) {
+            System.out.print((++sheepCount)+" ");
+        }
+    }
+    public static void main(String[] args) {
+        ExecutorService service = null;
+
+        try {
+            service = Executors.newFixedThreadPool(20);
+            SheepManager manager = new SheepManager();
+            for(int i=0; i<10; i++)
+            service.submit(() -> manager.incrementAndReport());
+        } finally {
+            if(service != null) service.shutdown();
+        }
+    }
+}
+----
+
+- Synchronization is about  protecting data integerity  at the cost of performance.
+
+== Concurrent Collections
+
+[source,java]
+----
+private Map<String, Object> test = new ConcurrentHashMap<>();
+
+public void put(String key, String value) {
+    test.put(key, value);
+}
+
+public Object get(String key) {
+    return test.get(key);
+}
+----
+
+=== Understanding memory consistency errors
+
+- The purpose of concurrent collection classes is to solve common memory consistency errors. A memory consistency error occurs when two threads have inconsistent views of what should be the same data.
+
+- When two threads try to modify the same non-concurrent collection, the JVM may throw a ConcurrentModificationException at run time.
+[source,java]
+----
+Map<String, Object> foodData = new HashMap<String, Object>();
+foodData.put("penguin", 1);
+foodData.put("flamingo", 2);
+for(String key: foodData.keySet())
+    foodData.remove(key); // ConcurrentModificationException
+----
+=> it is due to keySet is not properly updated after the first element is removed
+
+However, when we change to `ConcurrentHashMap`
+
+[source,java]
+----
+Map<String, Object> foodData = new ConcurrentHashMap<String, Object>();
+foodData.put("penguin", 1);
+foodData.put("flamingo", 2);
+for(String key: foodData.keySet())
+    foodData.remove(key);
+----
+=> the iterator created by keySet is updated as soon as an object is removed from the Map.
+
+=== Working with Concurrent Classes
+
+image::concurrent-collection-classes.png[]
+
+[source,java]
+----
+Map<String,Integer> map = new ConcurrentHashMap<>();
+map.put("zebra", 52);
+map.put("elephent", 10);
+System.out.println(map.get("elephent"));
+
+Queue<Integer> queue = new ConcurrentLinkedQueue<>();
+queue.offer(31);
+System.out.println(queue.peek());
+System.out.println(queue.poll());
+
+Deque<Integer> deque = new ConcurrentLinkedDeque<>();
+deque.offer(1);
+deque.push(4);
+System.out.println(deque.peek());
+System.out.println(deque.pop());
+----
+
+=== Blocking Queues
+
+- The `BlockingQueue` is just like a regular `Queue`, except that it includes methods that will wait a specific amount of time to complete an operation.
+
+- `offer(E e, long timeout, TimeUnit unit)`: return `false` if time elapses before space is available.
+- `poll(long timeout, TimeUnit unit)`: return `null` if the time elapses before the item is available.
+
+[source,java]
+----
+try {
+    BlockingQueue<Integer> blockingQueue = new LinkedBlockingQueue<>();
+    blockingQueue.offer(39);
+    blockingQueue.offer(3, 4, TimeUnit.SECONDS);
+    System.out.println(blockingQueue.poll());
+    System.out.println(blockingQueue.poll(10, TimeUnit.MILLISECONDS));
+} catch (InterruptedException e) {
+    // Handle interruption
+}
+----
+
+- The `LinkedBlockingDeque` methods
+
+* `offerFirst(E e, long timeout, TimeUnit unit)`
+* `offerLast(E e, long timeout, TimeUnit unit)`
+* `pollFirst(long timeout, TimeUnit unit)`
+* `pollLast(long timeout, TimeUnit unit)`
+
+[source,java]
+----
+try {
+    BlockingDeque<Integer> blockingDeque = new LinkedBlockingDeque<>();
+    blockingDeque.offer(91);
+    blockingDeque.offerFirst(5, 2, TimeUnit.MINUTES);
+    blockingDeque.offerLast(47, 100, TimeUnit.MICROSECONDS);
+    blockingDeque.offer(3, 4, TimeUnit.SECONDS);
+    System.out.println(blockingDeque.poll());
+    System.out.println(blockingDeque.poll(950, TimeUnit.MILLISECONDS));
+    System.out.println(blockingDeque.pollFirst(200, TimeUnit.NANOSECONDS));
+    System.out.println(blockingDeque.pollLast(1, TimeUnit.SECONDS));
+} catch (InterruptedException e) {
+    // Handle interruption
+}
+----
+
+=== SkipList Collections
+
+- `ConcurrentSkipListSet` and `ConcurrentSkipListMap` are concurrent versions of their sorted counterparts, `TreeSet` and `TreeMap` respectively.
+
+=== CopyOnWrite Collections
+
+- `CopyOnWriteArrayList` and `CopyOnWriteArraySet`, these classes copy all of their elements to a new underlying structure anytime an element is added, modified, or removed. By a modifi ed element, we mean that the
+reference in the collection is changed. Modifying the actual contents of the collection will not cause a new structure to be allocated.
+
+[source,java]
+----
+List<Integer> list = new CopyOnWriteArrayList<>(Arrays.asList(4,3,52));
+for(Integer item: list) {
+    System.out.print(item+" ");
+    list.add(9);
+}
+System.out.println();
+System.out.println("Size: "+list.size());
+----
+
+Output
+----
+4 3 52
+Size: 6
+----
+
+=== Optaining Synchronized Collections
+
+image::synchronized-collections-method.png[]
+
+WARNING: while the methods synchronize access to data elements, such as `get()` and `set()` methods, they do not synchronize access on any iterators that you may create from the synchronized collections. You must you a synchronized block if you need to iterate over any returned collections
+
+[source,java]
+----
+List<Integer> list = Collections.synchronizedList(Arrays.asList(1,2,3));
+synchronized(list) {
+    for (int data : list)
+        System.out.print(data + " ");
+}
+----
+
+WARNING: unlike concurrent collections, the synchronized collections throw an exception if they are modified within an iterator by a single thread.
+
+[source,java]
+----
+Map<String, Object> foodData = new HashMap<>();
+foodData.put("penguin", 1);
+foodData.put("flamingo", 2);
+Map<String, Object> synchronizedFoodData = Collections.synchronizedMap(foodData);
+for (String key : synchronizedFoodData.keySet())
+    synchronizedFoodData.remove(key);// THROW ConcurrentModificationException
+----
+
+== Parallel Streams
+
+- By default, the number of threads available in a parallel stream is related to the number of available CPUs in your environment.
+
+=== Creating Parallel Streams
+
+- `parallel()`: create a parallel stream from an existing stream
+[source,java]
+----
+Stream<Integer> stream = Arrays.asList(1,2,3,4,5,6).stream();
+Stream<Integer> parallelStream = stream.parallel();
+----
+
+- `parallelStrem()`: create a Stream from a Java Collection class
+[source,java]
+----
+Stream<Integer> parallelStream2 = Arrays.asList(1,2,3,4,5,6).parallelStream();
+----
+
+NOTE: The Stream interface includes a method `isParallel()` that can be used
+to test if the instance of a stream supports parallel processing. Some
+operations on streams preserve the parallel attribute, while others do
+not. For example, the `Stream.concat(Stream s1, Stream s2)` is parallel
+if either s1 or s2 is parallel. On the other hand, `flatMap()` creates a new
+stream that is not parallel by default, regardless of whether the underlying
+elements were parallel.
+
+=== Processing tasks in parallel
+
+[source,java]
+----
+Arrays.asList(1,2,3,4,5,6)
+    .parallelStream()
+    .forEach(s -> System.out.print(s+" "));
+----
+
+- The output of the above code is unpredictable, however you can use `forEachOrdered()` to force a parallel stream to process the results in order at the cost of performance.
+
+[source,java]
+----
+Arrays.asList(1,2,3,4,5,6)
+    .parallelStream()
+    .forEachOrdered(s -> System.out.print(s+" "));
+----
+
+=== Understanding performance improvements
+
+[source,java]
+----
+import java.util.*;
+public class WhaleDataCalculator {
+    public int processRecord(int input) {
+        try {
+            Thread.sleep(10);
+        } catch (InterruptedException e) {
+            // Handle interrupted exception
+        }
+        return input+1;
+    }
+
+    public void processAllData(List<Integer> data) {
+        data.stream().map(a -> processRecord(a)).count();
+    }
+
+    public static void main(String[] args) {
+        WhaleDataCalculator calculator = new WhaleDataCalculator();
+        // Define the data
+        List<Integer> data = new ArrayList<Integer>();
+        for(int i=0; i<4000; i++) data.add(i);
+        // Process the data
+        long start = System.currentTimeMillis();
+        calculator.processAllData(data);
+        double time = (System.currentTimeMillis()—start)/1000.0;
+        // Report results
+        System.out.println("\nTasks completed in: "+time+" seconds");
+        // Tasks completed in: 40.044 seconds
+    }
+}
+----
+
+If we change it to parallelStream, the tasks completed in about 10 seconds
+
+[source,java]
+----
+   public void processAllData(List<Integer> data) {
+        data.parallelStream().map(a -> processRecord(a)).count();
+    }
+----
+
+=== Avoiding Stateful Operations
+
+[source,java]
+----
+List<Integer> data = Collections.synchronizedList(new ArrayList<>());
+Arrays.asList(1,2,3,4,5,6).parallelStream()
+    .map(i -> {data.add(i); return i;}) // AVOID STATEFUL LAMBDA EXPRESSIONS!
+    .forEachOrdered(i -> System.out.print(i+" "));
+
+System.out.println();
+for(Integer e: data) {
+    System.out.print(e+" ");
+}
+----
+The following is a sample generation of this code snippet using a parallel stream:
+----
+1 2 3 4 5 6
+2 4 3 5 6 1
+----
+- Anytime you are working with a Collection with a parallel stream, it is recommended that you use a concurrent collection. For example, for an `ArrayList` object, the JVM internally manages a primitive array of the same type. As the size of the dynamic `ArrayList` grows, a new, larger primitive array is periodically required. If two threads both trigger the array to be resized at the same time, a result can be lost, producing the unexpected value.
+
+=== Performing order-based tasks
+
+Since order is not guaranteed with parallel streams, methods such as findAny() on parallel streams may result in unexpected behavior
+
+[source,java]
+----
+System.out.print(Arrays.asList(1,2,3,4,5,6).stream().findAny().get()); // 1
+
+System.out.print(Arrays.asList(1,2,3,4,5,6).parallelStream().findAny().get()); // unpredictable
+----
+
+the results of ordered operations on a parallel stream will be consistent
+with a serial stream, calling `skip(5).limit(2).findFirst()` will return the
+same result on ordered serial and parallel streams.
+
+
+
+=== Unordered stream
+
+- Create an unorder stream
+
+[source,java]
+----
+Arrays.asList(1,2,3,4,5,6).stream().unordered();
+----
+
+This method does not actually reorder the elements; it just tells the JVM that if an
+order-based stream operation is applied, the order can be ignored. For example, calling `skip(5)` on an unordered stream will skip any 5 elements, not the first 5 required on an ordered stream.
+
+For serial streams, using an unordered version has no effect, but on parallel streams, the results can greatly improve performance:
+[source,java]
+----
+Arrays.asList(1,2,3,4,5,6).stream().unordered().parallel();
+----
+
+=== Combining result with `reduce()`
+
+[source,java]
+----
+System.out.println(Arrays.asList('w', 'o', 'l', 'f')
+    .stream()
+    .reduce("",(c,s1) -> c + s1,
+        (s2,s3) -> s2 + s3));
+----
+
+[source,java]
+----
+System.out.println(Arrays.asList(1,2,3,4,5,6)
+    .parallelStream()
+    .reduce(0,(a,b) -> (a-b))); // NOT AN ASSOCIATIVE ACCUMULATOR
+    // resutl is unpredictable
+----
+
+[source,java]
+----
+System.out.println(Arrays.asList("w","o","l","f")
+    .parallelStream()
+    .reduce("X",String::concat));
+In fact, it can output XwXoXlXf . As part of the parallel process, the identity is applied to
+multiple elements in the stream, resulting in very unexpected data.
+----
+
+=== Combining result with `collect()`
+
+Like `reduce()`, the Streams API includes a three-argument version of `collect()` that takes accumulator and combiner operators, along with a supplier operator instead of an identity.
+
+[source,java]
+----
+Stream<String> stream = Stream.of("w", "o", "l", "f").parallel();
+SortedSet<String> set = stream.collect(ConcurrentSkipListSet::new, Set::add, Set::addAll);
+System.out.println(set); // [f, l, o, w]
+----
+
+[source,java]
+----
+Stream<String> stream = Stream.of("w", "o", "l", "f").parallel();
+Set<String> set = stream.collect(Collectors.toSet());
+System.out.println(set); // [f, w, l, o]
+----
+
+Requirements for Parallel Reduction with collect()
+
+- The stream is parallel.
+- The parameter of the collect operation has the Collector.Characteristics.CONCURRENT
+characteristic.
+- Either the stream is unordered, or the collector has the characteristic
+Collector.Characteristics.UNORDERED .
+
+[source,java]
+----
+Stream<String> ohMy = Stream.of("lions", "tigers", "bears").parallel();
+ConcurrentMap<Integer, String> map = ohMy
+    .collect(Collectors.toConcurrentMap(String::length, k -> k,
+    (s1, s2) -> s1 + "," + s2));
+System.out.println(map); // {5=lions,bears, 6=tigers}
+System.out.println(map.getClass()); // java.util.concurrent.ConcurrentHashMap
+
+----
+
+The Collectors class includes two sets of methods for retrieving collectors
+that are both UNORDERED and CONCURRENT , `Collectors.toConcurrentMap()` and
+`Collectors.groupingByConcurrent()`, and therefore it is capable of performing parallel
+reductions efficiently
+
+[source,java]
+----
+Stream<String> ohMy = Stream.of("lions", "tigers", "bears").parallel();
+ConcurrentMap<Integer, List<String>> map = ohMy.collect(
+Collectors.groupingByConcurrent(String::length));
+System.out.println(map); // {5=[lions, bears], 6=[tigers]}
+----
+
+== Managing Concurrent Processes
+
+=== CyclicBarrier
+
+The CyclicBarrier class allows us to perform complex, multi-threaded tasks, while all
+threads stop and wait at logical barriers.
+
+[source,java]
+----
+import java.util.concurrent.*;
+public class LionPenManager {
+    private void removeAnimals() { System.out.println("Removing animals"); }
+    private void cleanPen() { System.out.println("Cleaning the pen"); }
+    private void addAnimals() { System.out.println("Adding animals"); }
+    public void performTask(CyclicBarrier c1, CyclicBarrier c2) {
+        try {
+            removeAnimals();
+            c1.await();
+            cleanPen();
+            c2.await();
+            addAnimals();
+        } catch (InterruptedException | BrokenBarrierException e) {
+            // Handle checked exceptions here
+        }
+    }
+    public static void main(String[] args) {
+        ExecutorService service = null;
+        try {
+            service = Executors.newFixedThreadPool(4);
+            LionPenManager manager = new LionPenManager();
+            CyclicBarrier c1 = new CyclicBarrier(4);
+            CyclicBarrier c2 = new CyclicBarrier(4,
+            () -> System.out.println("*** Pen Cleaned!"));
+            for(int i=0; i<4; i++)
+                service.submit(() -> manager.performTask(c1,c2));
+        } finally {
+            if(service != null) service.shutdown();
+        }
+    }
+}
+----
+
+The following is sample output based on this revised implementation of our
+LionPenManager class:
+----
+Removing animals
+Removing animals
+Removing animals
+Removing animals
+Cleaning the pen
+Cleaning the pen
+Cleaning the pen
+Cleaning the pen
+*** Pen Cleaned!
+Adding animals
+Adding animals
+Adding animals
+Adding animals
+----
+
+NOTE: After a CyclicBarrier is broken, all threads are released and the number of threads wait-
+ing on the CyclicBarrier goes back to zero. At this point, the CyclicBarrier may be
+used again for a new set of waiting threads. For example, if our CyclicBarrier limit is 5
+and we have 15 threads that call await() , then the CyclicBarrier will be activated a total
+of three times.
+
+=== ForkJoinPool
+
+- The Fork/Join framework relies on the concept of recursion to solve complex tasks.
+
+Applying the fork/join framework requires us to perform three steps:
+
+1. Create a `ForkJoinTask` .
+2. Create the `ForkJoinPool` .
+3. Start the `ForkJoinTask` .
+
+you should know how to implement the fork/join solution by extending one of two classes, `RecursiveAction` and `RecursiveTask` , both of which imple-
+ment the `ForkJoinTask` interface.
+
+The first class, `RecursiveAction`, is an abstract class that requires us to implement the `compute()` method, which returns `void` , to perform the bulk of the work. The second class, `RecursiveTask` , is an abstract generic class that requires us to implement the `compute()` method, which returns the generic type, to perform the bulk of the work.
+
+=== RecursiveAction
+[source,java]
+----
+import java.util.*;
+import java.util.concurrent.*;
+
+public class WeighAnimalAction extends RecursiveAction {
+    private int start;
+    private int end;
+    private Double[] weights;
+
+    public WeighAnimalAction(Double[] weights, int start, int end) {
+        this.start = start;
+        this.end = end;
+        this.weights = weights;
+    }
+
+    protected void compute() {
+        if (end-start <= 3) {
+            for (int i = start; i < end; i++) {
+                weights[i] = (Double) new Random().nextInt();
+            }
+        } else {
+            int middle = start + (end-start) / 2;
+            invokeAll(new WeighAnimalAction(weights, start, middle),
+                new WeighAnimalAction(weights, middle, end));
+        }
+    }
+}
+----
+
+// use it in main method
+[source,java]
+----
+public static void main(String[] args) {
+Double[] weights = new Double[10];
+ForkJoinTask<?> task = new WeighAnimalAction(weights,0,weights.length);
+ForkJoinPool pool pool = new ForkJoinPool();
+pool.invoke(task);
+// Print results
+System.out.println();
+System.out.print("Weights: ");
+Arrays.asList(weights).stream().forEach(
+    d -> System.out.print(d.intValue()+" "));
+}
+----
+
+WARNING: Creating a ForkJoinTask and submitting it to a ForkJoinPool does not
+guarantee it will be executed immediately. For example, a recursive step
+may generate 10 tasks when there are only four threads available. Like a
+pooled thread executor, the tasks will wait for an available thread to start
+processing the data.
+
+=== RecursiveTask<T>
+[source,java]
+----
+public class WeighAnimalTask extends RecursiveTask<Double> {
+    private int start;
+    private int end;
+    private Double[] weights;
+
+    protected Double compute() {
+        if (end - start <= 3) {
+            double sum = 0;
+            for (int i = start; i < end; i++) {
+                weights[i] = (Double) new Random().nextInt();
+                sum += weights[i];
+            }
+
+            return sum;
+        } else {
+            int middle = start + (end-start) / 2;
+            RecursiveTask<Double> otherTask = new WeighAnimalTask(weights, start, middle);
+            otherTask.fork(); //start this task in other thread
+
+            return new WeighAnimalTask(weights,middle,end).compute() + otherTask.join();
+        } 
+    }
+}
+----
+
+using in main
+
+[source,java]
+----
+ForkJoinTask<Double> task = new WeighAnimalTask(weights,0,weights.length);
+ForkJoinPool pool pool = new ForkJoinPool();
+Double sum = pool.invoke(task);
+System.out.println("Sum: "+sum);
+----
+
+- The `invokeAll()` method takes two instances of fork/join class and do not return a result.
+
+- `fork()` method causes a new task to be submitted to the pool
+
+- `join()` method called after `fork()` and causes current thread to wait for the results of the subtask.
+
+== Deadlock
+
+- Deadlock occurs when two or more threads are blocked forever, each waiting for the other.
+
+== Starvation
+
+- Starvation occurs when a single thread is perpetually deined access to a shared resources or lock.
+
+== Livelock
+
+- Livelock occurs when two or more threads are conceptually blocked forever, although they
+are each still active and trying to complete their task. Livelock is a special case of resource
+starvation in which two or more threads actively try to acquire a set of locks, are unable to
+do so, and restart part of the process.
+
+- Livelock is often a result of two threads trying to resolve a deadlock.
+
+- In practice, livelock is often very difficult issue to detect. Threads in a livelock state appear
+active and able to respond to requests, even when they are in fact stuck in an endless cycle.
+
+
+=== Questions note:
+
+- Only `Callable` capbable of throwing checked exception (not `Runnable`)
+
+- `scheduleWithFixedDelay()` and `scheduleAtFixedRate()` only support `Runnable`
+
+- `sorted()` on a parallel stream does not mean that `findAny()` will return the first record.
+`findAny()` will return the value from the first thread that retrieves a record.
+
+- With `RecursiveAction`, `Object result = pool.invoke(action);`` can still compile if the ForkJoinTask is generic `ForkJoinTask<?>`
+
+- The stream that is created by `flatMap()` is not parallel by default, even though its elements are parallel stream.
+
+- Applications with many resource-heavy tasks tend to benefit more from concurrency than ones with CPU-intensive tasks.
+
+- `Future<?>.get` wait for the computed result, if you wrap a try/catch around it, then all exceptions in `call()` are handled.

@@ -1,0 +1,429 @@
+:doctype: article
+:encoding: utf-8
+:lang: en
+:toc: left
+:toclevels: 3
+:source-highlighter: highlightjs
+:icons: fontt
+:imagesdir: images
+:sectnums:
+
+== Override and overload rules
+
+- When multiple overloaded methods are present, Java looks for the closet match first. It tries to find the following:
+    
+    + exact match
+    + matching supper class type
+    + convert to larger primitive type
+    + convert to an boxed type
+    + varargs
+
+- For overriding,
+
+    + Access modifier must be the same or more accessible
+    + Return type must be the same or more ristrict type
+    + Checked exceptions must be the same or subclass 
+    + Method must not be static
+
+== Abstract class
+- The first concret subclass of an abstract class is required to implement all abstract methods that were not implemented by a supper class.
+
+=== static and final
+
+[source,java]
+----
+abstract class Cat {
+    String name = "test";
+    void clean() { } (1)
+}
+
+class Lion extends Cat {
+    void clean() { } (2)
+}
+----
+
+in this example, `static` cannot be added independently on 1 or 2 because the subclass overrides it
+
+== instanceof
+
+- `a instanceof B`, meaning a is an object of class B, subclasses of B or classes that implements B interface (directly or indirectly).
+
+- if the literal `null` or a variable reference pointing to `null` is used to check `instanceof`, the result is `false`.
+
+[source,java]
+----
+class HeaviAnimal {}
+class Hippo extends HeaviAnimal {}
+class Elephent extends HeaviAnimal {}
+
+Hippo a = new Hippo()
+boolean check = a instanceof Elephent; // COMPILATION ERROR
+----
+
+[source,java]
+----
+class HeaviAnimal {}
+class Hippo extends HeaviAnimal {}
+class Elephent extends HeaviAnimal {}
+
+HeaviAnimal a = new Hippo()
+boolean check = a instanceof Elephent; // DOES COMPILE
+----
+
+but
+
+[source,java]
+----
+interface Mother {}
+class Hippo extends HeaviAnimal {}
+
+Hippo a = new Hippo();
+boolean check = a instanceof Mother; // DOES COMPILE
+----
+
+because, there might be a class
+[source,java]
+----
+class MotherHippo extends Hippo implements Mother {}
+----
+
+- if `instanceof` with `interface`, Java will wait until runtime to do the check.
+
+== Virtual method invocation
+
+- They are regular nonstatic method
+- Java looks at the actual type of object at runtime and call on that.
+- It called `virtual method invocation` because it doesn't work on instance variables.
+
+[source,java]
+----
+abstract class Animal {
+    String name = "???";
+    public void printName() {
+        System.out.println(name);
+    }
+}
+
+class Lion extends Animal {
+    String name = "Leo";
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Animal animal = new Lion();
+        animal.printName(); // ???
+    }
+}
+----
+
+NOTE: if the called method itself is being called in another method of the super class, Java still looks for the implementation of the subclass.
+
+[source,java]
+----
+abstract class Animal {
+    public void careFor() {
+        play();
+    }
+
+    public void play() {
+        System.out.println("a");
+    }
+}
+
+class Lion extends Animal {
+    public void play() {
+        System.out.println("b");
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Animal animal = new Lion();
+        animal.careFor(); //b
+    }
+}
+----
+
+== Reflection
+
+- Reflection is a technique in Java to look at the information of the class at runtime.
+
+- Whenever you override `equals()` you are expected to override `hashCode()`. hash code is used when storing the objects as a key in a map.
+
+- if `equals()` returns `true`, hashCode() must return the same result for those two objects.
+
+- if `equals()` returns `false`, `hashCode()` doesn't have to return different result.
+
+- `hashCode()` is not legal if it uses more variables than `equals()`
+
+
+== Enum
+
+- In Java, `enum` is `classes` that represents an enumeration (classes that contains static final members). 
+
+- `s == Season.SUMMER` will be `true`
+
+- `s.ordinal()` returns the order of the enum (0, 1, 2, ..)
+- `s.name()` returns the enum name.
+- `Season.values()` returns an array of all values.
+
+- `Season.SUMMER == 2` // does not compile
+- Season s = Season.valueOf("SUMMER");
+- Season s = Season.valueOf("summer"); // does not compile
+- cannot extends from enum
+
+[source,java]
+----
+Season summer = Season.SUMMER;
+
+switch(summer) {
+    case SUMMER:
+        ...
+    case WINTER:
+        ...
+    case SPRINT:
+        ...
+    
+}
+----
+
+- `case Season.SUMMER` and `case 2` will not compile.
+
+[source,java]
+----
+public enum OnlyOne {
+    ONCE (true);
+    private OnlyOne(boolean b) {
+        System.out.println("constructing");
+    }
+    public static void main(String[] args) {
+        // prints constructing
+        OnlyOne firstCall = OnlyOne.ONCE ;
+        // doesn't print anything
+        OnlyOne secondCall = OnlyOne.ONCE ;
+    } 
+}
+----
+
+- if enum has abstract method, every other values in this must provide the implementation
+
+[source,java]
+----
+public enum Season {
+    WINTER {
+        public void printHours() { System.out.println("9am-3pm");
+    }, SPRING {
+        public void printHours() { System.out.println("9am-5pm");
+    }, SUMMER {
+        public void printHours() { System.out.println("9am-7pm");
+    }, FALL {
+        public void printHours() { System.out.println("9am-5pm");
+    };
+    public abstract void printHours();
+}
+----
+
+- if we dont want each and every enum value to have a method, we can create a default implementation and override it.
+
+[source,java]
+--------
+public enum Season3 {
+    WINTER {
+        public void printHours() { System.out.println("short hours");}
+    }, SUMMER {
+        public void printHours() { System.out.println("long hours");}
+    }, SPRING, FALL;
+    public void printHours() { System.out.println("default hours");}
+}
+--------
+
+== Nested classes
+
+- Inner (non static) class
+- local inner class (inside method)
+- anonymous inner class (local inner class without name)
+- inner static class
+
+=== Member inner class
+- can be `public`, `private` or `default`
+- can extends classes and implements interface
+- can be `abstract` or `final`
+- cannot have static fields or methods
+- can access all members of outer class (including `private`)
+
+[source,java]
+----
+public class Outer {
+    private String greeting = "Hi";
+    protected class Inner {
+        public int repeat = 3;
+        public void go() {
+            for (int i = 0; i < repeat; i++)
+            System.out.println(greeting);
+        }
+    }
+    public void callInner() {
+        Inner inner = new Inner();
+        inner.go();
+    }
+    public static void main(String[] args) {
+        Outer outer = new Outer();
+        outer.callInner();
+
+        Inner inner = outer.new Inner();
+        inner.go();
+    } 
+}
+----
+
+[source,java]
+----
+public class A {
+    private int x = 10;
+    class B {
+        private int x = 20;
+        class C {
+            private int x = 30;
+            public void allTheX() {
+                System.out.println(x);
+                System.out.println(this.x);
+                System.out.println(B.this.x);
+                System.out.println(A.this.x);
+            } 
+        } 
+    }
+    public static void main(String[] args) {
+        A a = new A();
+        A.B b = a.new B();
+        A.B.C c = b.new C();
+        c.allTheX();
+    }
+}
+----
+
+=== Local inner class
+- do not have access modifer
+- cannot be static
+- cannot have static fields or methods
+- can access all fields and methods of enclosing class
+- can access methods final or effectively final variables
+- can extends classes or implements interface
+
+[source,java]
+----
+public class Outer {
+    private int length = 5;
+    public void calculate() {
+        final int width = 20;
+        class Inner {
+            public void multiply() {
+                System.out.println(width*length);
+            }
+        }
+
+        Inner inner = new Inner();
+        inner.multiply();
+    }
+
+    public static void main(String[] args) {
+        new Outer().calculate(); //20
+    }
+}
+----
+
+- the effectively final concept was introduced in Java 8.
+
+[source,code]
+----
+public void isItFinal() {
+    int one = 20; // effectively final
+    int two = one;
+    two++;
+    int three; // effectively final
+    if (one == 4) three = 3;
+    else three = 4;
+    int four = 4;
+    class Inner {}
+    four = 5;
+}
+----
+
+=== Anonymous inner class
+- Local inner class without name.
+- Required to extends an existing class or implement interface.
+- Cannot extends class and implements interface at the same time.
+
+[source,java]
+----
+public class AnonInner {
+    abstract class SaleTodayOnly {
+        abstract int dollarsOff();
+    }
+    
+    public int admission(int basePrice) {
+        SaleTodayOnly sale = new SaleTodayOnly() {
+            int dollarsOff() { return 3; }
+        };
+        return basePrice - sale.dollarsOff();
+    } 
+}
+----
+
+[source,java]
+----
+public class AnonInner {
+    interface SaleTodayOnly {
+        int dollarsOff();
+    }
+    public int admission(int basePrice) {
+        SaleTodayOnly sale = new SaleTodayOnly() {
+            public int dollarsOff() { return 3; }
+        };
+        return basePrice - sale.dollarsOff();
+    } 
+}
+----
+
+- you can define right where they are needed, in a method argument
+[source,java]
+----
+public class AnonInner {
+    interface SaleTodayOnly {
+        int dollarsOff();
+    }
+    public int pay() {
+        return admission(5, new SaleTodayOnly() {
+            public int dollarsOff() { return 3;}
+        });
+    }
+    public int admission(int basePrice, SaleTodayOnly sale) {
+        return basePrice - sale.dollarsOff();
+    }
+}
+----
+
+=== Static nested class
+- A nested member class with `static` 
+- Can be instantiated without object of outer class.
+- Cannot access outer class instant variables without an object of outer class.
+- can be public, private, default and can be abstract
+- can extends other class and implements other interface
+- the enclosing class can refer to the fields and methods of the static nested class.
+
+[source,java]
+----
+public class Enclosing {
+    static class Nested {
+        private int price = 6;
+    }
+
+    public static void main(String[] args) {
+        Nested nested = new Nested();
+        System.out.println(nested.price);
+    } 
+}
+----
+
+- static nested class can be imported using normal or static import.
+
+page 34
