@@ -31,24 +31,50 @@ public static ZonedDateTime.of(LocalDateTime dateTime, ZoneId zone)
 
 WARNING: you are not allowed to create a date/time object directly. if you pass invalid numbers to `of()`, an exception will be thrown at run time.
 
-== Modyfying dates and times
+- Get current Zone
 
 [source,java]
 ----
-LocalDate date = LocalDate.of(2014, Month.JANUARY, 20);
-System.out.println(date); // 2014–01–20
-date = date.plusDays(2);
-System.out.println(date); // 2014–01–22
-date = date.plusWeeks(1);
-System.out.println(date); // 2014–01–29
-date = date.plusMonths(1);
-System.out.println(date); // 2014–02–28
-date = date.plusYears(5);
-System.out.println(date); // 2019–02–28
+ZoneId.systemDefault();
+----
+
+- Finding a time zone
+
+[source,java]
+----
+ZoneId.getAvailableZoneIds().stream()
+    .filter(z -> z.contains("US") || z.contains("America"))
+    .sorted().forEach(System.out::println);
+----
+
+== Modyfying dates and times
+
+- Go forward
+
+[source,java]
+----
+LocalDate date = LocalDate.of(2014, Month.JANUARY, 20); // 2014–01–20
+date = date.plusDays(2); // 2014–01–22
+date = date.plusWeeks(1); // 2014–01–29
+date = date.plusMonths(1); // 2014–02–28
+date = date.plusYears(5); // 2019–02–28
+----
+
+- Go backward
+
+[source,java]
+----
+ LocalDate date = LocalDate.of(2020, Month.JANUARY, 20);
+ LocalTime time = LocalTime.of(5, 15);
+ LocalDateTime dateTime = LocalDateTime.of(date, time); // 2020–01–20T05:15
+ dateTime = dateTime.minusDays(1); // 2020–01–19T05:15
+ dateTime = dateTime.minusHours(10); // 2020–01–18T19:15
+ dateTime = dateTime.minusSeconds(30); // 2020–01–18T19:14:30
 ----
 
 == Working with Periods
 
+- `LocalDate` has `toEpochDay()`
 - `LocalDateTime` and `ZoneDateTime` have `toEpochSecond()`
 
 [source,java]
@@ -80,7 +106,7 @@ Period everyThreeWeeks = Period.ofWeeks(3);
 Period everyOtherDay = Period.ofDays(2);
 Period everyYearAndAWeek = Period.of(1, 0, 7); //P1Y7D
 System.out.println(Period.of(0, 20, 47)); // P20M47D
-System.out.println(Period.ofWeeks(3)); // P31D, tricky one since Week is not a time unit that Period stores
+System.out.println(Period.ofWeeks(3)); // P21D, tricky one since Week is not a time unit that Period stores
 ----
 
 - You cannot chain methods when creating Period, only the last call takes effect.
@@ -89,6 +115,8 @@ System.out.println(Period.ofWeeks(3)); // P31D, tricky one since Week is not a t
 ----
 Period wrong = Period.ofYears(1).ofWeeks(1); // Period of 1 week
 ----
+
+- `Period` only works with `LocalDate` and `LocalDateTime` and `ZonedDateTime`
 
 == Working with Durations
 - `Duration` output has prefix `PT` (period of time)
@@ -128,6 +156,7 @@ System.out.println(ChronoUnit.MINUTES.between(one, date)); // DateTimeException
 ----
 
 - Using a `Duration` works the same way as using a `Period`, for example:
+
 [source,java]
 ----
 LocalDate date = LocalDate.of(2015, 1, 20);
@@ -194,10 +223,8 @@ System.out.println(instant);
 
 [source,java]
 ----
-Instant nextDay = instant.plus(1, ChronoUnit.DAYS);
-System.out.println(nextDay); // 2015–05–26T15:55:00Z
-Instant nextHour = instant.plus(1, ChronoUnit.HOURS);
-System.out.println(nextHour); // 2015–05–25T16:55:00Z
+Instant nextDay = instant.plus(1, ChronoUnit.DAYS); // 2015–05–26T15:55:00Z
+Instant nextHour = instant.plus(1, ChronoUnit.HOURS); // 2015–05–25T16:55:00Z
 Instant nextWeek = instant.plus(1, ChronoUnit.WEEKS); // exception
 ----
 
@@ -223,11 +250,11 @@ System.out.println(hours + "," + clock1 + "," + clock2);
 
 NOTE: We calculate GMT by subtracting the time zone from the time. 
 
-== Locale
+== Internationalization and Localization
 [source,java]
 ----
 Locale locale = Locale.getDefault();
-System.out.println(locale);
+System.out.println(locale); 
 ----
 
 valid locales
@@ -269,7 +296,7 @@ Locale l2 = new Locale.Builder()
     .build();
 ----
 
-NOTE: the locale builder converts to uppercase and lowercase for you as needed, which means this is legal:
+NOTE: the `Locale` builder converts to uppercase and lowercase for you as needed, which means this is legal:
 
 [source,java]
 ----
@@ -281,6 +308,7 @@ Locale l2 = new Locale.Builder()
 ----
 
 - You can set a new default Locale in Java
+
 [source,java]
 ----
 System.out.println(Locale.getDefault()); //en_US
@@ -290,7 +318,7 @@ System.out.println(Locale.getDefault()); //fr
 ----
 
 == Resource bundle
-
+- A resource bundle contains the local specific objects to be used by a program. It's like a map key-value. A resource bundle can be a property file or a Java class.
 
     Zoo_en.properties
         hello=Hello
@@ -325,6 +353,15 @@ public class ZooOpen {
 }
 ----
 
+output
+----
+Hello
+The zoo is open
+
+Bonjour
+Le zoo est ouvert
+----
+
 == Property file format
 ----
 animal:dolphin
@@ -351,6 +388,7 @@ keys.stream().map(k -> k + " " + rb.getString(k)).forEach(System.out::println);
 
 == Properties
  - Converting from ResourceBundle to Properties
+
 [source,java]
 ----
 Properties props = new Properties();
@@ -396,6 +434,7 @@ public class Tax_en_US extends ListResourceBundle {
 ----
 
 - There are two main ways to get ResourceBundle
+
 [source,java]
 ----
 ResourceBundle.getBundle("name");
@@ -542,7 +581,7 @@ System.out.println(en.parse(s)); // 40.45
 System.out.println(fr.parse(s)); // 40
 ----
 
-NOTE: the `part()` method parses only the beginning of a string. After it reaches a character that cannot be parsed, the parsing stops and the value is returned.   
+NOTE: the `parse()` method parses only the beginning of a string. After it reaches a character that cannot be parsed, the parsing stops and the value is returned.   
 
 [source,java]
 ----
@@ -577,6 +616,7 @@ System.out.println(date.getDayOfYear()); // 20
 ----
 
 - Using `DateTimeFormatter`
+
 [source,java]
 ----
 LocalDate date = LocalDate.of(2020, Month.JANUARY, 20);
@@ -609,6 +649,7 @@ System.out.println(time.format(shortDateTime));
 image::./images/of_localized_methods.png[]
 
 - There are two predefined formats that can show up on the exam: SHORT and MEDIUM . The other predefined formats involve time zones, which are not on the exam.
+
 [source,java]
 ----
 LocalDate date = LocalDate.of(2020, Month.JANUARY, 20);
@@ -629,6 +670,7 @@ System.out.println(dateTime.format(f)); // January 20, 2020, 11:12
 ----
 
 - Convert String back to Date/Time
+
 [source,java]
 ----
 DateTimeFormatter f = DateTimeFormatter.ofPattern("MM dd yyyy");

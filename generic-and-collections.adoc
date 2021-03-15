@@ -35,7 +35,7 @@ public static void main(String[] args) {
 
 === Type erasure
 - The process of replacing generic type with `Object` is referred to as type erasure.
-- Type erasure helps new code to be compatible with one Java code.
+- Type erasure helps new code to be compatible with old Java code.
 - Due to type erasure, there are some things that you can not do with generic type
 
 ** Call the constructor, new T() is not allowed
@@ -298,12 +298,15 @@ void clear();
 
 [source,java]
 ----
-void add(E e);
+boolean add(E e);
 void add(int index, E e);
+boolean addAll(Collection<?>);
+boolean addAll(int index, Collection<?>);
 E get(int index);
 int indexOf(Object o);
 int lastIndexOf(Object o);
-void remove(int index);
+E remove(int index);
+boolean remove(Object o);
 E set(int index, E e);
 boolean removeIf(Predicate<? super E> filter);
 void replaceAll(UnaryOperator<E> o);
@@ -451,6 +454,10 @@ Predicate<String> methodRef2 = String::isEmpty;
 ----
 Supplier<ArrayList> methodRef = ArrayList::new
 Supplier<ArrayList> lambda = () -> new ArrayList();
+
+Supplier<ArrayList<Integer>> s = ArrayList::new;
+// or
+Supplier<ArrayList<Integer>> s = ArrayList<Integer>::new;
 ----
 
 === merge, computeIfPresent, computeIfAbsent
@@ -459,7 +466,5 @@ Supplier<ArrayList> lambda = () -> new ArrayList();
 == NOTE
 
 - Type parameter cannot be instantiated directly
-
-- Queue `remove` takes an object param.
 
 - `Map map = new HashMap(); // this is ok` 
