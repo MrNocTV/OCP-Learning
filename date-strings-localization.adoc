@@ -551,14 +551,15 @@ import java.text.*;
 import java.util.*;
 public class FormatNumbers {
 public static void main(String[] args) {
-int attendeesPerYear = 3_200_000;
-int attendeesPerMonth = attendeesPerYear / 12;
-NumberFormat us = NumberFormat.getInstance(Locale.US);
-System.out.println(us.format(attendeesPerMonth)); // 266,666
-NumberFormat g = NumberFormat.getInstance(Locale.GERMANY);
-System.out.println(g.format(attendeesPerMonth)); // 266.666
-NumberFormat ca = NumberFormat.getInstance(Locale.CANADA_FRENCH);  
-System.out.println(ca.format(attendeesPerMonth)); // 266 666
+    int attendeesPerYear = 3_200_000;
+    int attendeesPerMonth = attendeesPerYear / 12;
+    NumberFormat us = NumberFormat.getInstance(Locale.US);
+    System.out.println(us.format(attendeesPerMonth)); // 266,666
+    NumberFormat g = NumberFormat.getInstance(Locale.GERMANY);
+    System.out.println(g.format(attendeesPerMonth)); // 266.666
+    NumberFormat ca = NumberFormat.getInstance(Locale.CANADA_FRENCH);  
+    System.out.println(ca.format(attendeesPerMonth)); // 266 666
+}
 ----
 
 - Format currency
@@ -570,7 +571,7 @@ NumberFormat us = NumberFormat.getCurrencyInstance();
 System.out.println(us.format(price));
 ----
 
-- The NumberFormat class defi nes a parse method for parsing a String into a number using a specific locale. The result of parsing depends on the locale. For example if the locale is in US and the number contains commas, the commas are treated as formatting symbols.
+- The NumberFormat class defines a `parse` method for parsing a String into a number using a specific locale. The result of parsing depends on the locale. For example if the locale is in US and the number contains commas, the commas are treated as formatting symbols.
 
 [source,java]
 ----
@@ -646,7 +647,7 @@ System.out.println(date.format(shortDateTime));
 System.out.println(time.format(shortDateTime));
 ----
 
-image::./images/of_localized_methods.png[]
+image::../images/of_localized_methods.png[]
 
 - There are two predefined formats that can show up on the exam: SHORT and MEDIUM . The other predefined formats involve time zones, which are not on the exam.
 
