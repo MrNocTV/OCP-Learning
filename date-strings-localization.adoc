@@ -194,7 +194,7 @@ System.out.println(date.plus(days)); // Unsupported unit: Seconds
 ----
 Instant now = Instant.now();
 Instant later = Instant.now();
-Duration = Duration.between(now, later);
+Duration duration = Duration.between(now, later);
 System.out.println(duration.toMillis());
 ----
 

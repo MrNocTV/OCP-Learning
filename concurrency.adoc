@@ -126,13 +126,13 @@ public class ZooInfo {
 
 - Once you have finished using a thread executor, it is important that you call the `shutdown()` method. A thread executor creates a non-daemon thread on the first task that is executed, so failing to call `shutdown()` will result in your application never terminating.
 
-- `shutdown()` will reject any new tasks submitted to the thread executor while continuinng to execute any previously sumitted tasks.
+- `shutdown()` will reject any new tasks submitted to the thread executor while continuing to execute any previously sumitted tasks.
 
 - If a new task is submitted to the thread executor while it is shutting down, a RejectedExecutionException will be thrown.
 
 image::executor-service-life-cycle.png[]
 
-- `List<Runnable> shutdownNow()` attempts to stop all running tasks and discards any that have not been started yet. It returns a list of tasks that were never started.
+- `List<Runnable> shutdownNow()` attempts to stop all running tasks and discards any that have not been started yet. It returns a list List<Runnable> of tasks that were never started.
 
 == Submitting Tasks
 
@@ -140,7 +140,7 @@ image::executor-service-life-cycle.png[]
 - `Future<?> submit(Runnable r)`
 - `<T> Future<T> submit(Callable<T> task)`: 
 - `<T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks) throws InterruptedException`: execute the given tasks, synchronously return the result of all tasks, in the same order with `Collection<? extends Callable<T>>`
-- <T> T invokeAny( Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException: execute the given tasks, synchronously return the result of one of finished tasks, cancelling any unfinished tasks.
+- `<T> T invokeAny( Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException`: execute the given tasks, synchronously return the result of one of finished tasks, cancelling any unfinished tasks.
 
 - With `invokeAll()`, even though Future.isDone() returns true for each
 element in the returned List , a task could have completed normally or thrown an exception.
@@ -455,10 +455,10 @@ try {
 
 - The `LinkedBlockingDeque` methods
 
-* `offerFirst(E e, long timeout, TimeUnit unit)`
-* `offerLast(E e, long timeout, TimeUnit unit)`
-* `pollFirst(long timeout, TimeUnit unit)`
-* `pollLast(long timeout, TimeUnit unit)`
+* `offerFirst(E e, long timeout, TimeUnit unit)`: return `false` if time elapses before space is available
+* `offerLast(E e, long timeout, TimeUnit unit)`: return `false` if time elapses before space is available
+* `pollFirst(long timeout, TimeUnit unit)`: return `null` if time elapses before space is available
+* `pollLast(long timeout, TimeUnit unit)`: return `null` if time elapses before space is available.
 
 [source,java]
 ----
@@ -483,7 +483,7 @@ try {
 
 === CopyOnWrite Collections
 
-- `CopyOnWriteArrayList` and `CopyOnWriteArraySet`, these classes copy all of their elements to a new underlying structure anytime an element is added, modified, or removed. By a modifi ed element, we mean that the
+- `CopyOnWriteArrayList` and `CopyOnWriteArraySet`, these classes copy all of their elements to a new underlying structure anytime an element is added, modified, or removed. By a modified element, we mean that the
 reference in the collection is changed. Modifying the actual contents of the collection will not cause a new structure to be allocated.
 
 [source,java]
@@ -507,7 +507,7 @@ Size: 6
 
 image::synchronized-collections-method.png[]
 
-WARNING: while the methods synchronize access to data elements, such as `get()` and `set()` methods, they do not synchronize access on any iterators that you may create from the synchronized collections. You must you a synchronized block if you need to iterate over any returned collections
+WARNING: while the methods synchronize access to data elements, such as `get()` and `set()` methods, they do not synchronize access on any iterators that you may create from the synchronized collections. You must use a synchronized block if you need to iterate over any returned collections
 
 [source,java]
 ----
@@ -537,6 +537,7 @@ for (String key : synchronizedFoodData.keySet())
 === Creating Parallel Streams
 
 - `parallel()`: create a parallel stream from an existing stream
+
 [source,java]
 ----
 Stream<Integer> stream = Arrays.asList(1,2,3,4,5,6).stream();
@@ -544,6 +545,7 @@ Stream<Integer> parallelStream = stream.parallel();
 ----
 
 - `parallelStrem()`: create a Stream from a Java Collection class
+
 [source,java]
 ----
 Stream<Integer> parallelStream2 = Arrays.asList(1,2,3,4,5,6).parallelStream();
@@ -886,6 +888,8 @@ may generate 10 tasks when there are only four threads available. Like a
 pooled thread executor, the tasks will wait for an available thread to start
 processing the data.
 
+The subtasks can be invoked either by invokeAll() or fork() method (use fork() when the subtask returns a value). Use the join() method to get the computed results (if you used fork() method earlier).
+
 === RecursiveTask<T>
 [source,java]
 ----
@@ -930,6 +934,30 @@ System.out.println("Sum: "+sum);
 
 - `join()` method called after `fork()` and causes current thread to wait for the results of the subtask.
 
+- To get the number of processors configuration in Fork/Join pool
+
+```java
+ForkJoinPool.commonPool().getParallelism();
+```
+
+- The `getParallelism()` get value from `java.util.concurrent.ForkJoinPool.common.parallelism`, it means you can modify it using `System.setProperty`
+
+```java
+import java.util.concurrent.ForkJoinPool;
+public class Parallelism {
+    public static void main(String []args) {
+        System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "8");
+        System.out.println(ForkJoinPool.commonPool().getParallelism()); // 8
+    }
+}
+```
+
+- or execute the program using JVM paramemter
+
+```java
+java -Djava.util.concurrent.ForkJoinPool.common.parallelism=8 GetParallelism
+```
+
 == Deadlock
 
 - Deadlock occurs when two or more threads are blocked forever, each waiting for the other.
@@ -967,3 +995,332 @@ active and able to respond to requests, even when they are in fact stuck in an e
 - Applications with many resource-heavy tasks tend to benefit more from concurrency than ones with CPU-intensive tasks.
 
 - `Future<?>.get` wait for the computed result, if you wrap a try/catch around it, then all exceptions in `call()` are handled.
+
+
+# Note from other book
+
+- creating thread by extending `Thread`
+```java
+class MyThread extends Thread {
+    @Override
+    public void run() {
+        try {
+            sleep(1000);
+
+        } catch (InterruptedException e) {
+
+        }
+    }
+
+    public static void main(String[] args) {
+        Thread t = new Thread();
+        t.start();
+    }
+}
+```
+
+- creating thread by implementing `Runnable` interface
+
+```java
+class RunnableImpl implements Runnable {
+    @Override
+    public void run() {
+        System.out.println("in run() thread name is " + Thread.getCurrentThread().getName());
+    }
+
+    public static void main(String[] args) {
+        Thread t = new Thread(new RunnableImpl());
+        t.start();
+        System.out.println("in main() thread name is " + Thread.getCurrentThread().getName());
+    }
+}
+```
+
+- the section of code that is commonly accessed and modified by more than one thread is known as critical section.
+
+- Inside a `synchronized` block, if an exception is thrown, the lock is automatically released by the JVM.
+
+- If `synchronized`, an instance method will implicitly acquire a lock on `this` reference.
+
+- For static method, acquire lock on class object
+
+```java
+public synchronized void assign(int i) {
+    val = i;
+}
+
+// the above code is equivalent with
+
+public void assign(int i) {
+    synchronized(this) {
+        val = i;
+    }
+}
+
+// with static method
+
+public static synchronized void assign(int i){}
+
+// is equivalent with
+
+public static void assign(int i){
+    synchronized(SomeClass.class) {
+
+    }
+}
+```
+
+- you cannot declare constructors `synchronized`, it will result in complation error, because JVM ensure that only 1 thread can invoke a constructor call at a given point in time.
+
+- the `lock` is obtained for an object, not for a piece of code, this is a commonly beginner misunderstanding.
+
+## Deadlock
+
+- A deadlock arises when multiple threads are in a situation where they cannot proceed and wait indefinitely for the others to terminate.
+
+## live lock
+
+- Consider two threads t1 and t2. t1 makes change and t2 undoes that change. when both threads t1 and t2 work, it will appear as though lots of work is getting done, but not progress is made.
+
+- Similar to deadlock, the process hang. However, in deadlock, the threads state are never change, in livelock, the state are change continuously. 
+
+## java.util.concurrent.atomic package
+
+```java
+AtomicBoolean;
+AtomicInteger;
+AtomicIntegerArray;
+AtomicLong;
+AtomicLongArray;
+AtomicReference<V>;
+AtomicReferenceArray<E>;
+```
+
+- The classes such as AtomicInteger do not use a lock; rather, they internally use `volatile` variables and a low-level mechanism known as Compare-and-Set (CAS). For this reason, using `AtomicInteger` and related classes is faster than using lock with `synchronized` keyword.
+
+## java.util.concurrent Collections
+
+- the high-level abstractions for synchronizing activities of two or more threads are known as `synchronizers`. Synchronizer internally makes use of the existing low-level APIs for thread coordination.
+
+- `Semaphore`: counter to control number of threads that can access a resource at the same time
+
+- `CountDownLatch`
+
+- `Exchanger`: exchange data between two threads.
+
+- `CyclicBarrier`
+
+- `Phaser`: coordinate threads by phases.
+
+- For the exam, you only need to know `CyclicBarrier`
+
+```java
+CyclicBarrier(int numThreads);
+CyclicBarrier(int parties, Runnable barrierAction);
+int await();
+int await(long timeout, TimeUnit unit);
+boolean isBroken();
+void reset();
+```
+
+Example
+
+```java
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.BrokenBarrierException;
+
+class MixedDoubleTennisGame extends Thread {
+    @Override
+    public void run() {
+        System.out.println("All 4 players are ready, start");
+    }
+}
+
+class Player extends Thread {
+    CyclicBarrier waitPoint;
+
+    public Player(CyclicBarrier barrier, String name) {
+        this.setName(name);
+        waitPoint = barrier;
+        this.start();
+    }
+
+    @Override
+    public void run() {
+        System.out.println("Player " + getName() + " is ready");
+        try {
+            waitPoint.await();
+        } catch (BrokenBarrierException | InterruptedException e) {
+            System.out.println("An exception occured while wating");
+        }
+    }
+}
+
+class CyclicBarrierTest {
+    public static void main(String[] args) {
+        CyclicBarrier cb = new CyclicBarrier(4, new MixedDoubleTennisGame());
+
+        new Player(cb, "P1");
+        new Player(cb, "P2");
+        new Player(cb, "P3");
+        new Player(cb, "P4");
+    }
+}
+```
+
+- ConcurrentModificationException with ArrayList. Because iterators of ArrayList are fail-fast. it will throw exception if it detects that the underlying container has changed when it's iterating over the elements of the container.
+
+```java
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+public class COWList {
+    public static void main(String[] args) {
+        List<String> aList = new CopyOnWriteArrayList<>();
+        aList.add("one");
+        aList.add("two");
+        aList.add("three");
+
+        Iterator listIter = aList.iterator();
+        
+        while (listIter.hasNext()) {
+            listIter.next();
+            aList.add("four"); // the program does not crash
+        }
+    }
+}
+```
+
+output:
+```
+one
+two
+three
+```
+
+- If you replace `new CopyOnWriteArrayList<>()` with `new ArrayList<>();` a ConcurrentModificationException will occur.
+
+However, you can remove elements while iterating through an `ArrayList`
+
+- Another way to execute Thread via an Excecutor
+
+```java
+class Task implements Runnable {
+    public void run() {
+        System.out.println("Calling Task.run()");
+    }
+}
+
+class RepeatedExecutor implements Executor {
+    @Override
+    public void execute(Runnable runnable) {
+        new Thread(runnable).start();
+    }
+
+    public void execute(Runnable runnable, int times) {
+        for (int i = 0; i < 3; i++)
+            execute(runnable);
+    }
+}
+
+class ExecutorTest {
+    public static void main(String[] args) {
+        Runnable runnable = new Task();
+        Thread thread = new Thread(runnable);
+        thread.start();
+        RepeatedExecutor executor = new RepeatedExecutor();
+        executor.execute(runnable, 3);
+    }
+}
+```
+
+- Create a Callable, submit it to ExecutorService
+
+```java
+class Factorial implements Callable<Long> {
+    long n;
+    public Factorial(long n) {
+this.n = n; }
+    public Long call() throws Exception {
+        if(n <= 0) {
+            throw new Exception("for finding factorial, N should be > 0");
+        }
+        long fact = 1;
+        for(long longVal = 1; longVal <= n; longVal++) {
+            fact *= longVal;
+        }
+        return fact;
+    }
+}
+
+class CallableTest {
+    public static void main(String []args) throws Exception {
+        // the value for which we want to find the factorial
+        long N = 20;
+        // get a callable task to be submitted to the executor service
+        Callable<Long> task = new Factorial(N);
+        // create an ExecutorService with a fixed thread pool having one thread
+        ExecutorService es = Executors.newSingleThreadExecutor();
+        // submit the task to the executor service and store the Future object
+        Future<Long> future = es.submit(task);
+        // wait for the get() method that blocks until the computation is complete.
+        System.out.printf("factorial of %d is %d", N, future.get());
+        // done. shutdown the executor service since we don't need it anymore
+        es.shutdown();
+    } 
+}
+```
+
+## Parallel Fork/Join framework
+
+- The framework is an implementation of the ExecutorService interface and provides an easy-to-use concurrent platform in order to exploit multiple processors.
+
+- This model is particularly useful for divide-and-conquer problems.
+
+- Dividing the task into smaller tasks is `forking`, and merging the results from the smaller task is `joining`.
+
+- The fork/join framework uses the stealing algorithm: when a worker thread completes its work and is free, it takes (or steal) work from other threads that are still busy doing some work.
+
+pseudocode for fork/join
+
+```
+forkJoinAlgorithm() {
+    fork the tasks;
+    join the tasks;
+    compose the results;
+}
+```
+
+example
+```
+doRecursiveTask(input) {
+    if (the task is small enough to be handle by a thread) {
+        compute the small task
+        return the result
+    } else {
+        fork the task into two parts
+        call compute() on first task, join() on second task, return combined results.
+    }
+}
+```
+
+## parallel stream
+
+- you can convert a parallel stream to a sequential stream by callling `sequential()`.
+
+```java
+List<Integer> ints = Arrays.asList(1, 2, 3, 4, 5);
+System.out.println(ints.parallelStream().filter(i -> i % 2 == 0).sequential().isParallel()); // false
+```
+
+```java
+class CorrectStringSplitAndConcatenate {
+    public static void main(String []args) {
+        String words[] = "the quick brown fox jumps over the lazy dog".split(" ");
+        Optional<String> originalString =
+                (Arrays.stream(words).parallel().reduce((a, b) -> a + " " + b));
+        System.out.println(originalString.get());
+    }
+}
+```
