@@ -231,6 +231,3 @@ java -ea:com.wiley.demos.TestColors my.programs.Main
 ----
 java -ea:com.wiley.demos... -da:com.wiley.demos.TestColors my.programs.Main
 ----
-
-
-page 320

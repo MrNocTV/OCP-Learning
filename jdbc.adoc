@@ -425,9 +425,9 @@ String url = ":jdbc:derby:zoo";
 
 try (Conncetion conn = DriverManager.getConnection(url);
     Statement stmt = conn.createStatement();
-    ResultSet rs = stmt.executeQuery("select count(*) from animal")) {
-        ResultSet rs2 = stmt.executeQuery("select count(*) from animal"); // close rs1
-        int num = stmt.executeUpdate("update animal set name = 'clear' where name = 'other'"); // close rs2
+    ResultSet rs = stmt.executeQuery("select count(*) from animal");
+    ResultSet rs2 = stmt.executeQuery("select count(*) from animal"); // close rs1
+    int num = stmt.executeUpdate("update animal set name = 'clear' where name = 'other'"); // close rs2
     }
 ----
 

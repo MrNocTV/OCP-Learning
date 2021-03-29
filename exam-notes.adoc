@@ -1,0 +1,134 @@
+## Advanced class design
+
+- The `static` modifier only pertains to member classes.
+
+- Anonymous inner classes can also be created for classes.
+
+- Anonymous inner classes cannot be static.
+
+- A static nested class can contain a non - static inner class.
+
+- `equals()` method is reflexive (x.equals(x)), symmetric (x.equals(y) & y.equals(x)), transitive (x = y, y = z -> x = z), x.equals(null) => false (for any non-null x);
+
+- anonymous inner class cannot define a constructors explicitly since they dont have name!
+
+- more than one inner instance can be associated with the same outer instance.
+
+- member variables of the outer instance are always accessible to inner instances, regardless of their accessibility, (watch out if the inner class is in a static method)
+
+- an object of the outerclass can access the inner's class private property
+
+
+```java
+interface House{   
+    public default String getAddress(){      return "101 Main Str";   } 
+}  
+interface Office {   
+    public static String getAddress(){      return "101 Smart Str";   
+}  
+interface WFH extends House, Office{ }  
+class HomeOffice implements House, Office{   
+    public String getAddress(){      return "R No 1, Home";   } 
+}  
+public class TestClass {    public static void main(String[] args) {     
+    Office off = new HomeOffice();  //1     
+    System.out.println(off.getAddress()); //2   
+    } 
+} 
+```
+- the `getAddress()` is inside Office interface as a static method, compiler sees that off is `Office`, and it requires the static method of an interface has to be called using the interface name, instead of the reference name.
+
+- When a programmer does not define ANY constructor, the compiler inserts one automatically, the access modifier of which is same as that of the class.
+
+## Threads
+
+## Concurrency
+
+- `ConcurrentHashMap` does not support null key or value
+
+- AtomicInteger: incrementAndGet(), addAndGet()
+
+- Object's `wait()` method can throw IterruptedException, IllegalMonitorStateException
+
+- A `ForkJoinPool` differs from other kinds of `ExecutorService` mainly by virtue of employing `work-stealing`
+
+- A thread dies when the run( ) method ends.
+
+- Calling the method sleep( ) does not kill a thread.
+
+## Generic and collection
+
+- Two base interfaces of the collection framework are `Map` and `Collection`.
+
+- Binary search if cant find return (-(insertion point) - 1)
+
+- `remove()` is a Queue method that removes from the front
+
+- The Java exception mechanism is integrated with the Java synchronization model, so that locks are released if synchronized statements and invocations of synchronized methods complete abruptly
+
+## Lambda expression
+
+## JDBC
+
+- META-INF/services/java.sql.Driver
+
+- To get a connection
+    * put a jar into class path
+    * retrieve a connection using DriverManager.getConnection
+
+- Change to the database will be committed right after the update statement has completed execution
+
+- `ResultSetMetadata` gives you the information about the result of executing a query.
+
+- There is no difference in a stored procedure and function in terms of how it is called from JDBC code. A Callable is used for both. PreparedStatement is not used for either of these. It is used to call a regular SQL query repeatedly with different parameter values
+
+- A CallableStatement is easier to build and call from JDBC code than a PreparedStatement. 
+
+- As per Section 6.2 of JDBC 4.1 Specification:
+
+    * A JDBC API implementation must support Entry Level SQL92 plus the SQL command Drop Table.
+
+    * Entry Level SQL92 represents a "floor" for the level of SQL that a JDBC API implementation must support. Access to features based on SQL99 or SQL:2003 should be provided in a way that is compatible with the relevant part of the SQL99 or SQL:2003 specification
+
+## Date/Time
+
+## Exception & assertion
+
+java -ea:<class> myPackage.MyProgram 
+java -da:<package>... myPackage.MyProgram
+
+- `AccessDeniedException` is subclass of `IOException`
+
+- If an exception is thrown within the `try-with-resources` block, then that is the exception the caller gets, but if the `close()` throw another exception then this exception is added to the original exception as a suppressed exception.
+
+- Catch and finally blocks are executed after the resource opened in try-with-resources is closed
+
+-  ClassNotFoundException and NoSuchFieldException are checked exception.
+
+- PreparedStatement offers better performance when the same query is to be run multiple times with different parameter values.
+
+- PreparedStatement allows several additional SQL types such as BLOB and CLOB.
+
+## Localization
+
+- A resource bundle file could be a properties file or a class file.
+
+- A `PropertyResourceBundle` is backed by a properties file. A properties file is a plain-text file that contains translatable text. Properties files are not part of the Java source code, and they can contain values for String objects only. If you need to store other types of objects, use a ListResourceBundle instead.  
+
+- The `ListResourceBundle` class manages resources with a convenient list. Each ListResourceBundle is backed by a class file. You can store any locale-specific object in a ListResourceBundle. To add support for an additional Locale, you create another source file and compile it into a class file.
+
+## NIO
+- Path `normalize()` will not remove the root if the redundant `..` is already touch the root.
+
+- You can always create a File object whether or not an actual file or directory by that name exists.
+
+```java
+Path p1 = Paths.get("c:\\..\\temp\\test.txt");
+System.out.println(p1.normalize().toUri()); // will print file:///c:/temp/test.txt
+```
+
+## Fundamental serialization
+
+## Stream API 
+
+However, findAny is deliberately designed to be non-deterministic. Its API specifically says that it may return any element from the stream. If you want to select the first element, you should use findFirst.
