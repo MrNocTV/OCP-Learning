@@ -14,7 +14,7 @@
 
 - more than one inner instance can be associated with the same outer instance.
 
-- member variables of the outer instance are always accessible to inner instances, regardless of their accessibility, (watch out if the inner class is in a static method)
+- member variables of the outer instance are always accessible to inner instances, regardless of their accessibility
 
 - an object of the outerclass can access the inner's class private property
 
@@ -80,15 +80,19 @@ public class TestClass {    public static void main(String[] args) {
 
 - `ResultSetMetadata` gives you the information about the result of executing a query.
 
-- There is no difference in a stored procedure and function in terms of how it is called from JDBC code. A Callable is used for both. PreparedStatement is not used for either of these. It is used to call a regular SQL query repeatedly with different parameter values
+- There is no difference in a stored procedure and function in terms of how it is called from JDBC code. A `CallableStatement` is used for both. `PreparedStatement` is not used for either of these. It is used to call a regular SQL query repeatedly with different parameter values
 
-- A CallableStatement is easier to build and call from JDBC code than a PreparedStatement. 
+- A `CallableStatement` is easier to build and call from JDBC code than a `PreparedStatement`. 
 
 - As per Section 6.2 of JDBC 4.1 Specification:
 
     * A JDBC API implementation must support Entry Level SQL92 plus the SQL command Drop Table.
 
     * Entry Level SQL92 represents a "floor" for the level of SQL that a JDBC API implementation must support. Access to features based on SQL99 or SQL:2003 should be provided in a way that is compatible with the relevant part of the SQL99 or SQL:2003 specification
+
+- `PreparedStatement` offers better performance when the same query is to be run multiple times with different parameter values.
+
+- `PreparedStatement` allows several additional SQL types such as BLOB and CLOB.
 
 ## Date/Time
 
@@ -103,11 +107,7 @@ java -da:<package>... myPackage.MyProgram
 
 - Catch and finally blocks are executed after the resource opened in try-with-resources is closed
 
--  ClassNotFoundException and NoSuchFieldException are checked exception.
-
-- PreparedStatement offers better performance when the same query is to be run multiple times with different parameter values.
-
-- PreparedStatement allows several additional SQL types such as BLOB and CLOB.
+-  `ClassNotFoundException` and `NoSuchFieldException` are checked exception.
 
 ## Localization
 
@@ -131,4 +131,4 @@ System.out.println(p1.normalize().toUri()); // will print file:///c:/temp/test.t
 
 ## Stream API 
 
-However, findAny is deliberately designed to be non-deterministic. Its API specifically says that it may return any element from the stream. If you want to select the first element, you should use findFirst.
+- However, findAny is deliberately designed to be non-deterministic. Its API specifically says that it may return any element from the stream. If you want to select the first element, you should use findFirst.

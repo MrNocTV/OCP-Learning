@@ -18,7 +18,7 @@
 
 ----
 @FunctionalInterface public Supplier<T> {
-    <T> get();
+    T get();
 }
 
 @FunctionalInterface public Consumer<T> {
@@ -46,14 +46,18 @@
 }
 
 @FunctionalInterface public UnaryOperator<T> extends Function<T, T>{
+    T apply(T t);
 }
 
 @FunctionalInterface public BinaryOperator<T> extends BiFunction<T, T, T> {
+    T apply(T t, T t);
 }
 
 ----
 
 Examples with `BiConsumer`
+
+[source, java]
 ----
 Map<String, Integer> map = new HashMap<>();
 BiConsumer<String, Integer> b1 = map::put;
@@ -98,13 +102,13 @@ BiFunction<String, String, String> b1 = (s, add) -> s.concat(add);
 == Stream
 - stream is a sequence of data
 - stream pipeline is the operations that run on stream to produce a result
-- with streams, the data isn't generated up front, itis created when needed.
+- with streams, the data isn't generated up front, it is created when needed.
 - a stream inclydes:
 * source
 * intermediate operations
 * terminal operations
 
-
+[source,java]
 ----
 Stream<String> empty = Stream.empty();
 Stream<Integer> singleElemnt = Stream.of(1);
@@ -121,12 +125,14 @@ Stream<Integer> oddNumbers = Stream.iterate(1, n -> n + 2);
 - `allMatch(), anyMatch(), noneMatch()`
 - `collect()`
 - `count()`
-- `findAny(), findFirst()` -> Optional<T>
+- `Optional<T> findAny()`
+- `Optional<T> findFirst()``
 - `forEach()`
 - `Optional<T> min(<? super T> comparator)`
 - `Optional<T> max(<? super T> comparator)`
 - `reduce()`
 
+[source,java]
 ----
 Stream<String> s = Stream.of("1", "2", "3");
 System.out.println(s.count()); // 3
@@ -148,7 +154,10 @@ System.out.println(list.stream().noneMatch(pred)); // false
 System.out.println(infinite.anyMatch(pred)); // true
 ----
 
+NOTE: in the example above, the consecutive call with terminal operations like `allMatch` and `anyMatch` are just examples. If this happens in your code, you will get IllegalStateException because Stream can only be consumed once with a terminal operation.
+
 === reduce()
+[source,java]
 ----
 Stream<String> s = Stream.of("1", "2", "3", "4");
 System.out.println(s.reduce("", (a,b) -> a + b)); // 1234
@@ -158,29 +167,35 @@ System.out.println(s.reduce("", String::concat)); // 3456
 
 - reduce with three params, used in parallel stream
 
+[source,java]
 ----
 <U> U reduce(U identity, BiFunction<U,? super T,U> accumulator, BinaryOperator<U> combiner);
 
+Stream<Integer> stream = new ArrayList<>().parallelStream();
 BinaryOperator<Integer> op = (a, b) -> a * b;
 System.out.println(stream.reduce(1, op, op));
 ----
 
 === collect()
 
+[source,java]
 ----
-<R> R collect(Supplier<R> supplier, BiConsumer<R, ? super T> accumulator BiConsumer<R, R> combiner);
+<R> R collect(Supplier<R> supplier, BiConsumer<R, ? super T> accumulator, BiConsumer<R, R> combiner);
 <R,A> R collect(Collector<? super T, A,R> collector);
 ----
 
 - examples
+
+[source,java]
 ----
-Stream<String> stream = Stream.of("1", "2", "3", "4");
+Stream<String> stream = Stream.of("1", "2", "3", "4").parallel();
 StringBuilder word = stream.collect(StringBuilder::new, StringBuilder::append, StringBuilder::append);
 System.out.println(word.toString()); // 1234
 ----
 
+[source,java]
 ----
-Stream<String> stream = Stream.of("1", "2", "3", "4");
+Stream<String> stream = Stream.of("1", "2", "3", "4").parallel();
 TreeSet<String> set = stream.collect(TreeSet::new, TreeSet::add, TreeSet::addAll);
 System.out.println(set); // [1, 2, 3, 4]
 set = stream.collect(Collections.toCollection(TreeSet::new));
@@ -190,11 +205,11 @@ set = stream.collect(Collections.toSet());
 NOTE: should not rely on `Collections.toSet` as it's not cleared which implementation of Set will be used.
 
 == Intermediate operations
-- filter()
-- distinct()
-- limit()
-- skip()
-- map()
+- `filter()`
+- `distinct()`
+- `limit()`
+- `skip()`
+- `map()`
 
 [source,java]
 ----
@@ -211,6 +226,8 @@ List<String> two = Arrays.asList("one", "two");
 
 Stream<List<String>> animals = Stream.of(zero, one, two);
 animals.flatMap(l -> l.stream()).forEach(System.out::println);
+// using method reference
+animals.flatMap(Collection::stream).forEach(System.out::println);
 ----
 
 - sorted()
@@ -240,7 +257,7 @@ IntStream rangeClosed = IntStream.rangeClosed(1, 5);
 - primitive stream map to stream: mapToObj
 
 - IntFunction/ToIntFunction, DoubleFunction/ToDoubleFunctio, LongFunction/ToLongFunction
-- Function, IntUnaryOperator, DoubleUnaryOperator, LongUnaryOperator
+- Function, IntUnaryOperator, DoubleUnaryOperator, LongUnaryOperator, UnaryOperator
 - DoubleToLongFunction, DoubleToIntFunction
 - IntToDoubleFunction, IntToLongFunction
 - LongToDoubleFunction, LongToIntFunction
@@ -274,9 +291,9 @@ These functional interfaces are for primitives
 - DoubleUnaryOperator, IntUnaryOperator, LongUnaryOperator
 - DoubleBinaryOperator, IntBinaryOperator, LongBinaryOperator
 
-- ObjDoubleConsumer<T>
-- ObjIntConsumer<T>
-- ObjLongConsumer<T>
+- ObjDoubleConsumer<T> - void accept(Object o, double d);
+- ObjIntConsumer<T> - void accept(Object o, int i);
+- ObjLongConsumer<T> - void accept(Object o, long l);
 
 image::./images/4.9.png[]
 image::./images/4.10.png[]
@@ -311,7 +328,8 @@ optional.map(n -> "" + n)
 }
 ----
 
-=== Collectiong to Map
+=== Collection to Map
+
 [source,java]
 ----
 Stream<String> ohMy = Stream.of("lions", "tigers", "bears");
@@ -321,6 +339,7 @@ System.out.println(map); // {lions=5, bears=5, tigers=6}
 ----
 
 This will give an exception at runtime because we didn't specify what happens when two keys are the same.
+
 [source,java]
 ----
 Stream<String> ohMy = Stream.of("lions", "tigers", "bears");
@@ -341,6 +360,7 @@ System.out.println(map.getClass()); // class. java.util.TreeMap
 
 === Grouping, Partitioning, Mapping
 - groupingBy()
+
 [source,java]
 ----
 Stream<String> s = Stream.of("lions", "tigers", "bears");
@@ -361,7 +381,7 @@ We can even change the type of Map
 [source, java]
 ----
 Stream<String> s = Stream.of("lions", "tigers", "bears");
-TreeMap<Integer, Set<String>> map = s.collect(Collectors.groupingBy(String::new, TreeMap::new, Collectors.toSet()));
+TreeMap<Integer, Set<String>> map = s.collect(Collectors.groupingBy(String::length, TreeMap::new, Collectors.toSet()));
 System.out.println(map); // {5=[lions, bears], 6=[tigers]}
 ----
 
@@ -409,4 +429,30 @@ WARNING: all code that use method reference can be rewritten using lambda, but n
 
 NOTE: Stream objects can be used only once. Once the Stream pipeline is run, the Stream is marked invalid.
 
+- `Predicate` has methods `negate()` and `and()`
 
+- `Consumer` and `Function` have method `andThen()` to allow chaining on the consumed objects.
+
+- if we use `compose()`, the argument will be called first
+
+[source,java]
+----
+import java.util.Arrays;
+import java.util.function.Function;
+
+public class CombineFunctions {
+  public static void main(String[] args) {
+    Function<String, Integer> parseInt = Integer::parseInt;
+    Function<Integer, Integer> absInt = Math::abs;
+    Function<String, Integer> parseAndAbsInt = parseInt.andThen(absInt);
+    
+    // or using compose()
+    
+    Function<String, Integer> parseAndAbsInt = absInt.compose(parseInt);
+  }
+}
+----
+
+- `Function.identity()` return the argument without doing anything.
+
+- 

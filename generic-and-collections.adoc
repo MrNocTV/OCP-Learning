@@ -15,8 +15,6 @@
 
 - if `Arrays.binarySearch` cannot find the number, it will return a value equals: - insert index - 1 (negate index)
 
-== The Diamon Operator
-
 == Working with Generics
 [source,java]
 ----
@@ -468,3 +466,12 @@ Supplier<ArrayList<Integer>> s = ArrayList<Integer>::new;
 - Type parameter cannot be instantiated directly
 
 - `Map map = new HashMap(); // this is ok` 
+
+
+[source,java]
+----
+List<Integer> a = ...;
+
+
+
+----
