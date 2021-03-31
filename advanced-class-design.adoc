@@ -425,5 +425,3 @@ public class Enclosing {
 ----
 
 - static nested class can be imported using normal or static import.
-
-page 34
