@@ -109,6 +109,10 @@ java -da:<package>... myPackage.MyProgram
 
 -  `ClassNotFoundException` and `NoSuchFieldException` are checked exception.
 
+-  Error or any RuntimeException can be thrown without having to declare them in the `throws` clause.
+
+- You can enable or disable assertions in the unnamed root (default)package (the one in the current directory) using the following commands: java -ea:... myPackage.myProgram java -da:... myPackage.myProgram
+
 ## Localization
 
 - A resource bundle file could be a properties file or a class file.
@@ -121,6 +125,12 @@ java -da:<package>... myPackage.MyProgram
 - Path `normalize()` will not remove the root if the redundant `..` is already touch the root.
 
 - You can always create a File object whether or not an actual file or directory by that name exists.
+
+- Files.copy method will copy the file test1.txt into test2.txt. If test2.txt doesn't exist, it will be created. However, Files.isSameFile method doesn't check the contents of the file. It is meant to check if the two path objects resolve to the same file or not. In this case, they are not, and so, it will return false. 
+
+
+
+- FileSystemNotFoundException - The file system, identified by the URI, does not exist and cannot be created automatically, or the provider identified by the URI's scheme component is not installed
 
 ```java
 Path p1 = Paths.get("c:\\..\\temp\\test.txt");
