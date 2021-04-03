@@ -18,6 +18,11 @@
 
 - an object of the outerclass can access the inner's class private property
 
+- An enum is allowed to implement interfaces.
+
+- An enum cannot extend any other enum or class because an enum is implicitly extends from java.lang.Enum.
+
+- java.lang.Enum (from which every enum extends implicitly), makes the clone method final. So you cannot override it.
 
 ```java
 interface House{   
@@ -56,6 +61,10 @@ public class TestClass {    public static void main(String[] args) {
 
 - Calling the method sleep( ) does not kill a thread.
 
+- synchronized is not allowed to apply synchronized keyword to methods of an interface.
+
+- synchronized cannot be applied to an abstract method of a class.
+
 ## Generic and collection
 
 - Two base interfaces of the collection framework are `Map` and `Collection`.
@@ -65,6 +74,8 @@ public class TestClass {    public static void main(String[] args) {
 - `remove()` is a Queue method that removes from the front
 
 - The Java exception mechanism is integrated with the Java synchronization model, so that locks are released if synchronized statements and invocations of synchronized methods complete abruptly
+
+- The Collector created by Collectors.toMap throws java.lang.IllegalStateException if an attempt is made to store a key that already exists in the Map.
 
 ## Lambda expression
 
@@ -93,6 +104,20 @@ public class TestClass {    public static void main(String[] args) {
 - `PreparedStatement` offers better performance when the same query is to be run multiple times with different parameter values.
 
 - `PreparedStatement` allows several additional SQL types such as BLOB and CLOB.
+
+- DriverManager.registerDriver is a valid method but it takes java.sql.Driver instance and not a String.
+
+- This method is used by the Driver class to register itself with the DriverManager. It need not be called by the application programmer. 
+
+- In JDBC 4.0, if you have the jar file that implements the Driver in the classpath, the Driver is automatically registered.
+
+- When a JDBC Connection is created, it is in auto-commit mode.
+
+- The actual classes for Connection, Statement, and ResultSet interfaces are provided by the JDBC driver and are therefore driver dependent.
+
+- Thread is not an abstract class.
+
+- ForkJoinPool implements Executor.
 
 ## Date/Time
 
@@ -128,9 +153,15 @@ java -da:<package>... myPackage.MyProgram
 
 - Files.copy method will copy the file test1.txt into test2.txt. If test2.txt doesn't exist, it will be created. However, Files.isSameFile method doesn't check the contents of the file. It is meant to check if the two path objects resolve to the same file or not. In this case, they are not, and so, it will return false. 
 
+- FileSystemNotFoundException - The file system, identified by the URI, does not exist and cannot be created automatically, or the provider identified by the URI's scheme component is not installed (when create URI)
 
+- Note that none of the PrintWriter's methods throw any I/O exceptions because they supress the errors in writing and set an internal flag for error status instead.
 
-- FileSystemNotFoundException - The file system, identified by the URI, does not exist and cannot be created automatically, or the provider identified by the URI's scheme component is not installed
+- The checkError method returns true if there has been a problem in writing.
+
+- `Console` class is `java.io` package. (System.console())
+
+- Call to System.console() doesn't throw any exception either. It just returns null if Console is not available.
 
 ```java
 Path p1 = Paths.get("c:\\..\\temp\\test.txt");
