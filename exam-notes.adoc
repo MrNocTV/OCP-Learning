@@ -1,9 +1,5 @@
 ## Advanced class design
 
-- The `static` modifier only pertains to member classes.
-
-- Anonymous inner classes can also be created for classes.
-
 - Anonymous inner classes cannot be static.
 
 - A static nested class can contain a non - static inner class.
@@ -14,7 +10,7 @@
 
 - more than one inner instance can be associated with the same outer instance.
 
-- member variables of the outer instance are always accessible to inner instances, regardless of their accessibility
+- member variables of the outer instance are always accessible to inner instances, regardless of their accessibility (watch out for static method, inner class in static method cannot access instance member of the outer class)
 
 - an object of the outerclass can access the inner's class private property
 
@@ -23,6 +19,8 @@
 - An enum cannot extend any other enum or class because an enum is implicitly extends from java.lang.Enum.
 
 - java.lang.Enum (from which every enum extends implicitly), makes the clone method final. So you cannot override it.
+
+- When interfaces are involved, more than one method declarations may be implemented by a single method declaration. In this case, the overriding declaration must have a throws clause that is compatible with all the overriden declarations. 
 
 ```java
 interface House{   
@@ -45,25 +43,25 @@ public class TestClass {    public static void main(String[] args) {
 
 - When a programmer does not define ANY constructor, the compiler inserts one automatically, the access modifier of which is same as that of the class.
 
-## Threads
-
 ## Concurrency
 
-- `ConcurrentHashMap` does not support null key or value
+- `ConcurrentHashMap` does not support `null` key or value
 
-- AtomicInteger: incrementAndGet(), addAndGet()
+- AtomicInteger: incrementAndGet(), addAndGet(), `compareAndSet(old, new)`
 
 - Object's `wait()` method can throw IterruptedException, IllegalMonitorStateException
 
 - A `ForkJoinPool` differs from other kinds of `ExecutorService` mainly by virtue of employing `work-stealing`
 
-- A thread dies when the run( ) method ends.
+- A thread dies when the `run()` method ends.
 
-- Calling the method sleep( ) does not kill a thread.
+- Calling the method `sleep()` does not kill a thread.
 
 - synchronized is not allowed to apply synchronized keyword to methods of an interface.
 
 - synchronized cannot be applied to an abstract method of a class.
+
+- synchronized can be applied to static method of a class.
 
 ## Generic and collection
 
@@ -75,9 +73,7 @@ public class TestClass {    public static void main(String[] args) {
 
 - The Java exception mechanism is integrated with the Java synchronization model, so that locks are released if synchronized statements and invocations of synchronized methods complete abruptly
 
-- The Collector created by Collectors.toMap throws java.lang.IllegalStateException if an attempt is made to store a key that already exists in the Map.
-
-## Lambda expression
+- The Collector created by `Collectors.toMap` throws java.lang.IllegalStateException if an attempt is made to store a key that already exists in the Map.
 
 ## JDBC
 
@@ -91,7 +87,7 @@ public class TestClass {    public static void main(String[] args) {
 
 - `ResultSetMetadata` gives you the information about the result of executing a query.
 
-- There is no difference in a stored procedure and function in terms of how it is called from JDBC code. A `CallableStatement` is used for both. `PreparedStatement` is not used for either of these. It is used to call a regular SQL query repeatedly with different parameter values
+- There is no difference between a stored procedure and function in terms of how it is called from JDBC code. A `CallableStatement` is used for both. `PreparedStatement` is not used for either of these. It is used to call a regular SQL query repeatedly with different parameter values
 
 - A `CallableStatement` is easier to build and call from JDBC code than a `PreparedStatement`. 
 
@@ -105,9 +101,8 @@ public class TestClass {    public static void main(String[] args) {
 
 - `PreparedStatement` allows several additional SQL types such as BLOB and CLOB.
 
-- DriverManager.registerDriver is a valid method but it takes java.sql.Driver instance and not a String.
-
-- This method is used by the Driver class to register itself with the DriverManager. It need not be called by the application programmer. 
+- `DriverManager.registerDriver` is a valid method but it takes java.sql.Driver instance and not a String.
+This method is used by the Driver class to register itself with the DriverManager. It needs not be called by the application programmer. 
 
 - In JDBC 4.0, if you have the jar file that implements the Driver in the classpath, the Driver is automatically registered.
 
@@ -121,6 +116,8 @@ public class TestClass {    public static void main(String[] args) {
 
 ## Date/Time
 
+- Instant `truncatedTo()` only support ChronoUnit.HOURS or below, other than that, it will throw an exception.
+
 ## Exception & assertion
 
 java -ea:<class> myPackage.MyProgram 
@@ -132,11 +129,12 @@ java -da:<package>... myPackage.MyProgram
 
 - Catch and finally blocks are executed after the resource opened in try-with-resources is closed
 
--  `ClassNotFoundException` and `NoSuchFieldException` are checked exception.
+- `ClassNotFoundException` and `NoSuchFieldException` are checked exception.
 
 -  Error or any RuntimeException can be thrown without having to declare them in the `throws` clause.
 
-- You can enable or disable assertions in the unnamed root (default)package (the one in the current directory) using the following commands: java -ea:... myPackage.myProgram java -da:... myPackage.myProgram
+- You can enable or disable assertions in the unnamed root (default)package (the one in the current directory) using the following commands: 
+java -ea:... myPackage.myProgram
 
 ## Localization
 
@@ -151,17 +149,19 @@ java -da:<package>... myPackage.MyProgram
 
 - You can always create a File object whether or not an actual file or directory by that name exists.
 
-- Files.copy method will copy the file test1.txt into test2.txt. If test2.txt doesn't exist, it will be created. However, Files.isSameFile method doesn't check the contents of the file. It is meant to check if the two path objects resolve to the same file or not. In this case, they are not, and so, it will return false. 
+- Files.copy method will copy the file test1.txt into test2.txt. If test2.txt doesn't exist, it will be created. However, `Files.isSameFile` method doesn't check the contents of the file. It is meant to check if the two path objects resolve to the same file or not. In this case, they are not, and so, it will return false. 
 
 - FileSystemNotFoundException - The file system, identified by the URI, does not exist and cannot be created automatically, or the provider identified by the URI's scheme component is not installed (when create URI)
 
-- Note that none of the PrintWriter's methods throw any I/O exceptions because they supress the errors in writing and set an internal flag for error status instead.
+- Note that none of the PrintWriter's methods throw any I/O exceptions because they suppress the errors in writing and set an internal flag for error status instead.
 
-- The checkError method returns true if there has been a problem in writing.
+- The `prinwriter.checkError()` method returns true if there has been a problem in writing.
 
-- `Console` class is `java.io` package. (System.console())
+- `Console` class is `java.io` package. (`System.console()`)
 
-- Call to System.console() doesn't throw any exception either. It just returns null if Console is not available.
+- Call to `System.console()` doesn't throw any exception either. It just returns null if Console is not available.
+
+- `PrinWriter` does not have `write(boolean)`, it does have `write(char)`, `write(int)`, `write(String)` methods.
 
 ```java
 Path p1 = Paths.get("c:\\..\\temp\\test.txt");
