@@ -55,7 +55,7 @@ There are advantages, though, to using the reader/writer classes, as they are sp
 
 - Wrapping is the process by which an instance is passed to the constructor of another class and operations on the resulting instance are fitlered and applied to the original instance.
 - A low-level stream connects directly with the source of data.
-- A high-levle stream is built on top of another stream using wrapping.
+- A high-level stream is built on top of another stream using wrapping.
 
 [source,java]
 ----
@@ -441,7 +441,7 @@ out.print(animal); // PrintWriter method
 out.write(animal==null ? "null": animal.toString()); // Writer method
 ----
 
-- println()`
+- `println()`
 
 - `public PrintWriter format(String format, Object args...)`
 - `public PrintWriter printf(String format, Object args...)`

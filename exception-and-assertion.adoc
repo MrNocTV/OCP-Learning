@@ -15,7 +15,7 @@ image::exception-classes-hierarchy.png[]
 
 - try statement must have either or both catch/finally. try with resources is not required to have catch or finally.
 
-- cannot declare a catch block containing a checked exception that cannot be thrown by the try clause body.
+- cannot declare a catch block containing a checked exception that cannot be thrown by the try clause body. (unreachable code will cause compilation error)
 
 
 image::checked_exceptions.png[]
@@ -72,9 +72,7 @@ try {
 } 
 ----
 
-- You cant list the same exception more than one in the same try block. This will not compile
-
-- If both catch and finally throw exception, the exception in finally is thrown.
+- You cant list the same exception more than once in the same try block. This will not compile
 
 [source,java]
 ----
@@ -86,6 +84,8 @@ try {
     
 }
 ----
+
+- If both catch and finally throw exception, the exception in finally is thrown.
 
 - The multiple exception types in multi catch cannot have sub/superclass relationship.
 
@@ -131,7 +131,7 @@ public class StuckTurkeyCage implements AutoCloseable {
 
 - Suppressed exceptions applied to only exception that are thrown in `try clause`.
 
-Supposed we have a class implements AutoClosable and throw a catch exception in `close()`.
+Supposed we have a class implements AutoClosable and throw an  exception in `close()`.
 
 [source,java]
 ----

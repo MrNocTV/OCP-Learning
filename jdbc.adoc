@@ -425,7 +425,7 @@ String url = ":jdbc:derby:zoo";
 
 try (Conncetion conn = DriverManager.getConnection(url);
     Statement stmt = conn.createStatement();
-    ResultSet rs = stmt.executeQuery("select count(*) from animal");
+    ResultSet rs1 = stmt.executeQuery("select count(*) from animal");
     ResultSet rs2 = stmt.executeQuery("select count(*) from animal"); // close rs1
     int num = stmt.executeUpdate("update animal set name = 'clear' where name = 'other'"); // close rs2
     }
@@ -454,9 +454,9 @@ try (Connection conn = DriverManager.getConnection(url);
 
 - Modern JARs contain a file `META-INF/service` called `java.sql.Driver`. This is the name of the implementation class of Driver. Older JARS requires you to call `Class.forName()` to load driver.
 
-- An `SQL` exception will be thrown if you use `absolute(0)`.
+- An `SQL` exception will be thrown if you try to get result from `absolute(0)`, because it is the header of the table.
 
-- `Driver`, `Connection`, 'Statement' and `ResultSet` interfaces are part of the JDK. The concrete `DriverManager` class is also part of the JDK.
+- `Driver`, `Connection`, `Statement` and `ResultSet` interfaces are part of the JDK. The concrete `DriverManager` class is also part of the JDK.
 
 - Driver's implementation and Statement's implemenation are in database-specific JAR file.
 
@@ -468,6 +468,4 @@ try (Connection conn = DriverManager.getConnection(url);
 
 - In a `ResultSet`, columns start at 1
 
-- `beforeFirst()` and `afterLast()` do not return anything.
-
-- `rs.relative(-100)`, if the result only has 99 row, the cursor will be at the row before the first row of the result.
+- `beforeFirst()` and `afterLast()` do not return anything (unlike (`next(), `previos()`, `absolute` and `relative`))

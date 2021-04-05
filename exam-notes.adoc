@@ -57,11 +57,21 @@ public class TestClass {    public static void main(String[] args) {
 
 - Calling the method `sleep()` does not kill a thread.
 
-- synchronized is not allowed to apply synchronized keyword to methods of an interface.
+- it is not allowed to apply synchronized keyword to methods of an interface.
 
 - synchronized cannot be applied to an abstract method of a class.
 
 - synchronized can be applied to static method of a class.
+
+- Unlike a regular java class, you cannot access a non-final static field from an enum's constructor. ( JLS 8.9.2 )
+
+- Remember that static method of an interface can only be accessed by using the name of that interface
+
+- An interface can redeclare a default method and also make it abstract.
+
+- An interface can redeclare a default method and provide a different implementation.
+
+- You can throw subclass of checked exception in the overriden methods.
 
 ## Generic and collection
 
@@ -135,6 +145,14 @@ java -da:<package>... myPackage.MyProgram
 
 - You can enable or disable assertions in the unnamed root (default)package (the one in the current directory) using the following commands: 
 java -ea:... myPackage.myProgram
+
+- To enable assertions for the system level classes (classes in JDK) use
+-esa
+-enablesystemassertions
+
+- assert syntanx: `assert <boolean_expression> : <any_expresion_but_void>`
+
+- if assertion is disabled, `assert` will not be executed.
 
 ## Localization
 
