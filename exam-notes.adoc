@@ -8,8 +8,6 @@
 
 - anonymous inner class cannot define a constructors explicitly since they dont have name!
 
-- more than one inner instance can be associated with the same outer instance.
-
 - member variables of the outer instance are always accessible to inner instances, regardless of their accessibility (watch out for static method, inner class in static method cannot access instance member of the outer class)
 
 - an object of the outerclass can access the inner's class private property
@@ -71,7 +69,33 @@ public class TestClass {    public static void main(String[] args) {
 
 - An interface can redeclare a default method and provide a different implementation.
 
+- An interface can redeclare a static method and make it default.
+
 - You can throw subclass of checked exception in the overriden methods.
+
+- Remember that `Future.get()` will block until there is a value to return or there is an exception.
+
+
+```java
+
+public class TestClass {
+
+    class ClassA {
+
+    }
+
+    static class classB {
+
+    }
+
+    public static void main(String[] args) {
+        new TestClass().new ClassB(); // compilation error
+        new TestClass.B(); // this is valid
+    }
+
+}
+
+```
 
 ## Generic and collection
 
@@ -85,13 +109,17 @@ public class TestClass {    public static void main(String[] args) {
 
 - The Collector created by `Collectors.toMap` throws java.lang.IllegalStateException if an attempt is made to store a key that already exists in the Map.
 
+- If a HashMap already contains an entry for the specified key, the element already in this dictionary for that key is returned after modifying the entry to contain the new element. (when calling .put())
+
+- `Stream.count()` returns long
+
 ## JDBC
 
 - META-INF/services/java.sql.Driver
 
 - To get a connection
     * put a jar into class path
-    * retrieve a connection using DriverManager.getConnection
+    * retrieve a connection using `DriverManager.getConnection`
 
 - Change to the database will be committed right after the update statement has completed execution
 
@@ -128,9 +156,12 @@ This method is used by the Driver class to register itself with the DriverManage
 
 - Instant `truncatedTo()` only support ChronoUnit.HOURS or below, other than that, it will throw an exception.
 
+- All classess in java.time package such as classes for date, time, date and time combined, time zones, instants, duration, and clocks are immutable and thread-safe.
+
 ## Exception & assertion
 
 java -ea:<class> myPackage.MyProgram 
+
 java -da:<package>... myPackage.MyProgram
 
 - `AccessDeniedException` is subclass of `IOException`

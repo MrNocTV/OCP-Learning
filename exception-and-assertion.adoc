@@ -231,3 +231,12 @@ java -ea:com.wiley.demos.TestColors my.programs.Main
 ----
 java -ea:com.wiley.demos... -da:com.wiley.demos.TestColors my.programs.Main
 ----
+
+- You can catch Error
+
+[source,java]
+```
+try {
+    throw new AssertionError();
+} catch (AssertionError e) {}
+```

@@ -14,7 +14,7 @@
 - Interface can have `default` and `static` method.
 - `public static final` constants
 - You can obmit `Exception` in the overrided method of subclass.
-- Empty `interface` is called `marker interface`
+- Empty `interface` is called `marker interface` (or tag interface)
 
 === Functional interface
 
@@ -93,8 +93,6 @@ public class Capybara extends Rodent {
 === Immutable object
 - Class or all methods inside class must be final
 
-=== Builder pattern
+=== Builder pattern (not in exam)
 
-=== Factory pattern
-
-page 103
+=== Factory pattern (not in exam)
